@@ -29,6 +29,7 @@ type Engine struct {
 	proxyConns    map[string]connTraffic // active proxy connection traffic
 	closedUpload  int64                  // accumulated upload from closed proxy connections
 	closedDownload int64                 // accumulated download from closed proxy connections
+	clashSecret   string                 // Clash API authentication secret
 }
 
 // NewEngine creates a new VPN engine.
@@ -51,13 +52,14 @@ func (e *Engine) Connect(cfg *Config) error {
 	e.stateMachine.SetState(StateConnecting, nil)
 
 	// Build sing-box JSON config
-	configJSON, err := BuildSingBoxConfig(cfg)
+	configJSON, clashSecret, err := BuildSingBoxConfig(cfg)
 	if err != nil {
 		e.stateMachine.SetState(StateError, err)
 		return fmt.Errorf("failed to build config: %w", err)
 	}
 
-	log.Printf("sing-box config: %s", string(configJSON))
+	log.Printf("sing-box config built for server %s, protocol %s (%d bytes)",
+		cfg.Server.Address, cfg.Server.Protocol, len(configJSON))
 
 	// Create context with sing-box type registries (required for 1.12+).
 	ctx, cancel := context.WithCancel(include.Context(context.Background()))
@@ -98,6 +100,7 @@ func (e *Engine) Connect(cfg *Config) error {
 	e.proxyConns = make(map[string]connTraffic)
 	e.closedUpload = 0
 	e.closedDownload = 0
+	e.clashSecret = clashSecret
 
 	e.stateMachine.SetState(StateConnected, nil)
 
@@ -202,7 +205,14 @@ func (e *Engine) pollStats(ctx context.Context) {
 			e.mu.Unlock()
 
 			// Query the Clash API for per-connection traffic.
-			resp, err := client.Get("http://127.0.0.1:9090/connections")
+			req, reqErr := http.NewRequest("GET", "http://127.0.0.1:9090/connections", nil)
+			if reqErr != nil {
+				continue
+			}
+			if e.clashSecret != "" {
+				req.Header.Set("Authorization", "Bearer "+e.clashSecret)
+			}
+			resp, err := client.Do(req)
 			if err != nil {
 				continue
 			}

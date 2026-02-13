@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -91,6 +92,7 @@ func BuildHysteria2Outbound(cfg *ServerConfig) map[string]interface{} {
 		tlsCfg["alpn"] = strings.Split(alpn, ",")
 	}
 	if insecure, ok := cfg.Params["insecure"]; ok && insecure == "1" {
+		log.Printf("WARNING: TLS certificate verification DISABLED for %s:%d — connection is vulnerable to MITM", cfg.Address, cfg.Port)
 		tlsCfg["insecure"] = true
 	}
 	outbound["tls"] = tlsCfg

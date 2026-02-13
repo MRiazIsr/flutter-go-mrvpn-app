@@ -103,7 +103,19 @@ class ServerNotifier extends StateNotifier<List<ServerConfig>> {
   // ---------------------------------------------------------------------------
 
   /// Parse a vless:// or hysteria2:// link into a [ServerConfig].
+  static final _hostRegex = RegExp(
+    r'^([a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?$',
+  );
+  static final _ipRegex = RegExp(
+    r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$',
+  );
+
   static ServerConfig _parseLink(String link) {
+    // Length limit to prevent abuse
+    if (link.length > 2048) {
+      throw const FormatException('Server link is too long');
+    }
+
     final uri = Uri.tryParse(link);
     if (uri == null) {
       throw const FormatException('Invalid server link');
@@ -111,7 +123,7 @@ class ServerNotifier extends StateNotifier<List<ServerConfig>> {
 
     final scheme = uri.scheme.toLowerCase();
 
-    // Determine protocol from scheme.
+    // Whitelist allowed schemes.
     final String protocol;
     switch (scheme) {
       case 'vless':
@@ -130,12 +142,22 @@ class ServerNotifier extends StateNotifier<List<ServerConfig>> {
       throw const FormatException('Server address is empty');
     }
 
-    final port = uri.hasPort ? uri.port : _defaultPort(scheme);
+    // Validate host: must be a valid hostname or IPv4 address
+    if (!_hostRegex.hasMatch(address) && !_ipRegex.hasMatch(address)) {
+      throw const FormatException('Invalid server address');
+    }
 
-    // Use the fragment as the display name, falling back to address:port.
-    final name = uri.fragment.isNotEmpty
+    final port = uri.hasPort ? uri.port : _defaultPort(scheme);
+    if (port < 1 || port > 65535) {
+      throw const FormatException('Invalid port number');
+    }
+
+    // Use the fragment as the display name, sanitize control characters.
+    var name = uri.fragment.isNotEmpty
         ? Uri.decodeComponent(uri.fragment)
+            .replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '')
         : '$address:$port';
+    if (name.length > 100) name = name.substring(0, 100);
 
     // Generate a deterministic ID from the link so re-adding yields the same
     // identity. Using hashCode is sufficient for local-only identification.

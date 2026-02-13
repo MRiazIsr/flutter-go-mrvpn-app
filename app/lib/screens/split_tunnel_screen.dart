@@ -262,7 +262,7 @@ class _SplitTunnelScreenState extends ConsumerState<SplitTunnelScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Text(
-                      error.toString(),
+                      'Please ensure the backend service is running.',
                       style: theme.textTheme.bodySmall,
                       textAlign: TextAlign.center,
                     ),

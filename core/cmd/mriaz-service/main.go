@@ -102,14 +102,23 @@ func runCore(stop <-chan struct{}) {
 
 	log.Println("MRVPN core service started")
 
-	// Wait for stop signal
+	// Wait for stop signal from any source
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
 	if stop != nil {
-		<-stop
+		// Service mode: wait for SCM stop, IPC shutdown, or OS signal
+		select {
+		case <-stop:
+		case <-handler.ShutdownCh:
+		case <-sigChan:
+		}
 	} else {
-		// Interactive mode: wait for SIGINT/SIGTERM
-		sigChan := make(chan os.Signal, 1)
-		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-		<-sigChan
+		// Interactive mode: wait for IPC shutdown or OS signal
+		select {
+		case <-handler.ShutdownCh:
+		case <-sigChan:
+		}
 	}
 
 	log.Println("MRVPN core service stopping...")

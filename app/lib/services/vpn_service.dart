@@ -92,7 +92,7 @@ class VpnService {
     } catch (e) {
       _updateState(_currentState.copyWith(
         status: VpnStatus.error,
-        errorMessage: () => e.toString(),
+        errorMessage: () => _sanitizeError(e),
       ));
       rethrow;
     }
@@ -108,7 +108,7 @@ class VpnService {
     } catch (e) {
       _updateState(_currentState.copyWith(
         status: VpnStatus.error,
-        errorMessage: () => e.toString(),
+        errorMessage: () => _sanitizeError(e),
       ));
       rethrow;
     }
@@ -247,6 +247,27 @@ class VpnService {
         ));
         break;
     }
+  }
+
+  /// Sanitize backend error messages to avoid leaking internal details.
+  static String _sanitizeError(Object e) {
+    final msg = e.toString().toLowerCase();
+    if (msg.contains('not connected') || msg.contains('connection lost')) {
+      return 'Backend service is not connected';
+    }
+    if (msg.contains('timed out') || msg.contains('timeout')) {
+      return 'Request timed out';
+    }
+    if (msg.contains('connection refused')) {
+      return 'Unable to reach VPN server';
+    }
+    if (msg.contains('connection failed')) {
+      return 'Connection failed';
+    }
+    if (msg.contains('parse')) {
+      return 'Invalid server configuration';
+    }
+    return 'An error occurred';
   }
 
   /// Update the current state and notify listeners.

@@ -51,6 +51,8 @@ class _ServersScreenState extends ConsumerState<ServersScreen> {
                   final data = await Clipboard.getData(Clipboard.kTextPlain);
                   if (data?.text != null) {
                     controller.text = data!.text!;
+                    // Clear clipboard to avoid leaving VPN credentials accessible
+                    await Clipboard.setData(const ClipboardData(text: ''));
                   }
                 },
                 icon: const Icon(Icons.content_paste, size: 18),

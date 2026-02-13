@@ -4,7 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/translations.dart';
 import '../providers/locale_provider.dart';
+import '../providers/update_provider.dart';
+import '../services/update_service.dart';
 import '../theme/colors.dart';
+import '../widgets/update_dialog.dart';
 
 // ---------------------------------------------------------------------------
 // Settings-specific providers
@@ -204,24 +207,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'MRVPN',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'MRVPN',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
-                          ),
-                          Text(
-                            t('version'),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.5),
+                            Text(
+                              'v$appVersion',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.5),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                      _UpdateCheckButton(locale: locale),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -239,6 +245,66 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 24),
         ],
       ),
+    );
+  }
+}
+
+/// Button that manually triggers an update check.
+class _UpdateCheckButton extends ConsumerStatefulWidget {
+  final String locale;
+
+  const _UpdateCheckButton({required this.locale});
+
+  @override
+  ConsumerState<_UpdateCheckButton> createState() => _UpdateCheckButtonState();
+}
+
+class _UpdateCheckButtonState extends ConsumerState<_UpdateCheckButton> {
+  bool _checking = false;
+
+  Future<void> _checkForUpdates() async {
+    setState(() => _checking = true);
+
+    // Clear any skipped version so manual check always shows results.
+    await clearSkippedVersion();
+
+    final service = ref.read(updateServiceProvider);
+    final info = await service.checkForUpdate();
+
+    if (!mounted) return;
+    setState(() => _checking = false);
+
+    final t = (String key) => S.of(widget.locale, key);
+
+    if (info != null) {
+      showDialog(
+        context: context,
+        builder: (_) => UpdateDialog(info: info, locale: widget.locale),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(t('upToDate')),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = (String key) => S.of(widget.locale, key);
+
+    return TextButton.icon(
+      onPressed: _checking ? null : _checkForUpdates,
+      icon: _checking
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.refresh, size: 18),
+      label: Text(_checking ? t('checking') : t('checkForUpdates')),
     );
   }
 }

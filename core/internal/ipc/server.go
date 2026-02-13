@@ -7,9 +7,13 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/Microsoft/go-winio"
 )
+
+const maxClients = 10
+const maxMessageSize = 1 * 1024 * 1024 // 1MB max message size
 
 const pipeName = `\\.\pipe\MRVPN`
 
@@ -34,7 +38,7 @@ func NewServer(handler *Handler) *Server {
 // Start begins listening on the named pipe.
 func (s *Server) Start() error {
 	listener, err := winio.ListenPipe(pipeName, &winio.PipeConfig{
-		SecurityDescriptor: "D:P(A;;GA;;;WD)", // Allow everyone to connect
+		SecurityDescriptor: "D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGW;;;IU)", // SYSTEM + Admins + Interactive Users only
 		MessageMode:        false,
 		InputBufferSize:    65536,
 		OutputBufferSize:   1048576, // 1MB — app list with icons can be large
@@ -74,10 +78,16 @@ func (s *Server) Broadcast(notification *Notification) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	var failed []net.Conn
 	for conn := range s.clients {
 		if _, err := conn.Write(data); err != nil {
 			log.Printf("failed to send notification to client: %v", err)
+			failed = append(failed, conn)
 		}
+	}
+	for _, conn := range failed {
+		delete(s.clients, conn)
+		conn.Close()
 	}
 }
 
@@ -95,6 +105,12 @@ func (s *Server) acceptLoop() {
 		}
 
 		s.mu.Lock()
+		if len(s.clients) >= maxClients {
+			s.mu.Unlock()
+			log.Printf("rejecting connection: max clients (%d) reached", maxClients)
+			conn.Close()
+			continue
+		}
 		s.clients[conn] = true
 		s.mu.Unlock()
 
@@ -110,14 +126,14 @@ func (s *Server) handleClient(conn net.Conn) {
 		conn.Close()
 	}()
 
-	reader := bufio.NewReader(conn)
-	for {
-		line, err := reader.ReadBytes('\n')
-		if err != nil {
-			if err != io.EOF {
-				log.Printf("client read error: %v", err)
-			}
-			return
+	scanner := bufio.NewScanner(conn)
+	scanner.Buffer(make([]byte, 0, 64*1024), maxMessageSize)
+	for scanner.Scan() {
+		// Reset read deadline after each successful message
+		conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
 		}
 
 		var req Request
@@ -134,6 +150,11 @@ func (s *Server) handleClient(conn net.Conn) {
 
 		resp := s.handler.Handle(&req)
 		s.sendResponse(conn, resp)
+	}
+	if err := scanner.Err(); err != nil {
+		if err != io.EOF {
+			log.Printf("client read error: %v", err)
+		}
 	}
 }
 

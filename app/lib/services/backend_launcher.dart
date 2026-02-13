@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 
+import 'ipc_service.dart';
 import 'logger.dart';
 
 // ShellExecuteW signature
@@ -102,24 +103,26 @@ class BackendLauncher {
     }
   }
 
-  /// Stop the backend process synchronously (blocks the calling thread).
+  /// Stop the backend process synchronously via IPC shutdown command.
   void stop() {
     if (!_started) return;
-    AppLogger.log('LAUNCHER', 'Stopping backend (sync)...');
+    AppLogger.log('LAUNCHER', 'Stopping backend (sync via IPC)...');
     try {
-      Process.runSync('taskkill', ['/F', '/IM', _exeName]);
+      IpcService.sendShutdownSync();
     } catch (e) {
       AppLogger.log('LAUNCHER', 'Failed to stop backend: $e');
     }
     _started = false;
   }
 
-  /// Stop the backend process asynchronously (never blocks).
+  /// Stop the backend process asynchronously via IPC shutdown command.
   void stopAsync() {
     if (!_started) return;
     _started = false;
-    AppLogger.log('LAUNCHER', 'Stopping backend (async)...');
-    Process.run('taskkill', ['/F', '/IM', _exeName]).then((_) {}).onError((_, __) {});
+    AppLogger.log('LAUNCHER', 'Stopping backend (async via IPC)...');
+    try {
+      IpcService.sendShutdownSync();
+    } catch (_) {}
   }
 
   /// Kill any leftover MRVPN-service.exe processes.

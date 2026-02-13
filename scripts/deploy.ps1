@@ -33,16 +33,46 @@ $svcProcess = Get-Process -Name "MRVPN-service" -ErrorAction SilentlyContinue
 
 if ($uiProcess -or $svcProcess) {
     Write-Host "[*] Stopping running MRVPN..." -ForegroundColor Yellow
-    & taskkill /F /IM MRVPN-service.exe 2>$null
-    & taskkill /F /IM MRVPN.exe 2>$null
+
+    # 1) Graceful IPC shutdown (works without elevation)
+    try {
+        $pipe = New-Object System.IO.Pipes.NamedPipeClientStream('.', 'MRVPN', [System.IO.Pipes.PipeDirection]::InOut)
+        $pipe.Connect(2000)
+        $msg = [System.Text.Encoding]::UTF8.GetBytes('{"id":"0","method":"service.shutdown"}' + "`n")
+        $pipe.Write($msg, 0, $msg.Length)
+        $pipe.Flush()
+        $pipe.Close()
+        Write-Host "  -> Sent shutdown via IPC pipe" -ForegroundColor DarkGray
+    } catch {
+        Write-Host "  -> IPC pipe not available, trying fallback..." -ForegroundColor DarkGray
+    }
+
+    # 2) Stop UI process
     Stop-Process -Name "MRVPN" -Force -ErrorAction SilentlyContinue
-    Stop-Process -Name "MRVPN-service" -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 2
+
+    # 3) Wait for graceful exit
+    $waited = 0
+    while ($waited -lt 5) {
+        Start-Sleep -Milliseconds 500
+        $waited++
+        $still = Get-Process -Name "MRVPN-service" -ErrorAction SilentlyContinue
+        if (-not $still) { break }
+    }
+
+    # 4) Fallback
     $still = Get-Process -Name "MRVPN-service" -ErrorAction SilentlyContinue
     if ($still) {
-        Write-Host "  -> WARNING: MRVPN-service still running (elevated). Run as Admin." -ForegroundColor Red
-        throw "Cannot stop elevated MRVPN-service.exe. Please run PowerShell as Administrator."
+        Stop-Service -Name "MRVPN" -Force -ErrorAction SilentlyContinue
+        & taskkill /F /IM MRVPN-service.exe 2>$null
+        Start-Sleep -Seconds 2
+
+        $still = Get-Process -Name "MRVPN-service" -ErrorAction SilentlyContinue
+        if ($still) {
+            Write-Host "  -> WARNING: MRVPN-service still running. Run as Admin." -ForegroundColor Red
+            throw "Cannot stop elevated MRVPN-service.exe. Please run PowerShell as Administrator."
+        }
     }
+
     Write-Host "  -> Stopped" -ForegroundColor Green
 }
 

@@ -45,6 +45,10 @@ class _DomainListState extends State<DomainList> {
     super.dispose();
   }
 
+  static final _domainRegex = RegExp(
+    r'^(\*\.)?([a-z0-9]([a-z0-9\-]*[a-z0-9])?\.)*[a-z0-9]([a-z0-9\-]*[a-z0-9])?$',
+  );
+
   void _addDomain() {
     var domain = _controller.text.trim();
     if (domain.isEmpty) return;
@@ -61,12 +65,12 @@ class _DomainListState extends State<DomainList> {
     if (colonIdx != -1) {
       domain = domain.substring(0, colonIdx);
     }
-    domain = domain.trim();
+    domain = domain.trim().toLowerCase();
 
-    if (domain.isEmpty) return;
+    if (domain.isEmpty || domain.length > 253) return;
 
-    // Basic validation: at least one dot or valid pattern.
-    if (!domain.contains('.') && !domain.startsWith('*')) {
+    // Validate domain format: letters, digits, hyphens, dots, optional wildcard prefix
+    if (!_domainRegex.hasMatch(domain)) {
       _formKey.currentState?.validate();
       return;
     }
@@ -94,11 +98,17 @@ class _DomainListState extends State<DomainList> {
                   isDense: true,
                 ),
                 validator: (value) {
-                  if (value != null &&
-                      value.isNotEmpty &&
-                      !value.contains('.') &&
-                      !value.startsWith('*')) {
-                    return 'Enter a valid domain';
+                  if (value != null && value.isNotEmpty) {
+                    var cleaned = value.trim().toLowerCase();
+                    cleaned = cleaned.replaceFirst(RegExp(r'^https?://'), '');
+                    final slash = cleaned.indexOf('/');
+                    if (slash != -1) cleaned = cleaned.substring(0, slash);
+                    final colon = cleaned.indexOf(':');
+                    if (colon != -1) cleaned = cleaned.substring(0, colon);
+                    if (cleaned.length > 253 ||
+                        !_domainRegex.hasMatch(cleaned)) {
+                      return 'Enter a valid domain';
+                    }
                   }
                   return null;
                 },
