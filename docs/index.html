@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MRVPN — Fast & Secure VPN for Windows</title>
+  <meta name="description" content="Lightweight Windows VPN client powered by sing-box with VLESS and Hysteria2 support.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' style='stop-color:%237C3AED'/><stop offset='100%25' style='stop-color:%23EC4899'/></linearGradient></defs><path d='M50 5 L90 25 L90 65 Q90 90 50 95 Q10 90 10 65 L10 25 Z' fill='url(%23g)'/><text x='50' y='68' font-family='Arial,sans-serif' font-size='32' font-weight='bold' fill='white' text-anchor='middle'>MR</text></svg>">
+  <style>
+    /* ============================================================
+       RESET & BASE
+       ============================================================ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:          #0D0D1A;
+      --surface:     #1A1A2E;
+      --card:        #252540;
+      --border:      rgba(124, 58, 237, 0.15);
+      --text:        #FFFFFF;
+      --text-muted:  #A0A0B8;
+      --primary:     #7C3AED;
+      --primary-end: #EC4899;
+      --green:       #22C55E;
+      --radius:      16px;
+      --max-w:       1100px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .container {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ============================================================
+       ANIMATED BACKGROUND
+       ============================================================ */
+    .bg-glow {
+      position: fixed;
+      top: -40%;
+      left: -20%;
+      width: 80vw;
+      height: 80vw;
+      background: radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      animation: drift 20s ease-in-out infinite alternate;
+    }
+    .bg-glow-2 {
+      position: fixed;
+      bottom: -30%;
+      right: -20%;
+      width: 60vw;
+      height: 60vw;
+      background: radial-gradient(circle, rgba(236,72,153,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      animation: drift 25s ease-in-out infinite alternate-reverse;
+    }
+    @keyframes drift {
+      0%   { transform: translate(0, 0); }
+      100% { transform: translate(60px, 40px); }
+    }
+
+    section { position: relative; z-index: 1; }
+
+    /* ============================================================
+       NAV
+       ============================================================ */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 16px 0;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(13,13,26,0.75);
+      border-bottom: 1px solid var(--border);
+    }
+    nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .nav-brand:hover { text-decoration: none; }
+    .nav-links { display: flex; gap: 28px; }
+    .nav-links a {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    /* ============================================================
+       LOGO SVG
+       ============================================================ */
+    .logo-svg {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+    }
+    .logo-hero {
+      width: 80px;
+      height: 80px;
+    }
+
+    /* ============================================================
+       HERO
+       ============================================================ */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding-top: 80px;
+    }
+    .hero-inner { max-width: 640px; }
+    .hero h1 {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin: 20px 0 16px;
+    }
+    .hero h1 .gradient-text {
+      background: linear-gradient(135deg, var(--primary), var(--primary-end));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      margin-bottom: 36px;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .hero-buttons {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    /* ============================================================
+       BUTTONS
+       ============================================================ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.15s, box-shadow 0.25s;
+      text-decoration: none;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-end));
+      color: white;
+      box-shadow: 0 4px 24px rgba(124,58,237,0.35);
+    }
+    .btn-primary:hover {
+      box-shadow: 0 8px 32px rgba(124,58,237,0.5);
+    }
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover {
+      background: var(--card);
+      border-color: var(--primary);
+    }
+    .btn-sm {
+      padding: 8px 18px;
+      font-size: 0.85rem;
+      border-radius: 8px;
+    }
+    .btn svg { width: 18px; height: 18px; }
+
+    /* ============================================================
+       VERSION BADGE
+       ============================================================ */
+    .version-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(124,58,237,0.15);
+      color: var(--primary);
+      border: 1px solid rgba(124,58,237,0.25);
+      margin-bottom: 12px;
+    }
+
+    /* ============================================================
+       FEATURES
+       ============================================================ */
+    .features {
+      padding: 100px 0;
+    }
+    .section-title {
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .section-subtitle {
+      text-align: center;
+      color: var(--text-muted);
+      margin-bottom: 56px;
+      font-size: 1.05rem;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      transition: transform 0.2s, border-color 0.3s;
+    }
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(124,58,237,0.4);
+    }
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--primary), var(--primary-end));
+      margin-bottom: 16px;
+      font-size: 22px;
+    }
+    .feature-card h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    /* ============================================================
+       DOWNLOADS
+       ============================================================ */
+    .downloads {
+      padding: 80px 0 100px;
+    }
+
+    .latest-release {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px;
+      margin-bottom: 48px;
+    }
+    .latest-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .latest-header h3 {
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+    .latest-date {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .latest-assets {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .release-notes {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+      white-space: pre-line;
+    }
+
+    /* Previous releases */
+    .prev-releases h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text-muted);
+    }
+    .release-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .release-table th {
+      text-align: left;
+      padding: 10px 16px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border);
+    }
+    .release-table td {
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      border-bottom: 1px solid rgba(124,58,237,0.08);
+    }
+    .release-table tr:hover td {
+      background: rgba(124,58,237,0.04);
+    }
+    .tag-chip {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(124,58,237,0.12);
+      color: var(--primary);
+    }
+
+    /* Loading / error states */
+    .loading-state, .error-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .spinner {
+      display: inline-block;
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ============================================================
+       REQUIREMENTS
+       ============================================================ */
+    .requirements {
+      padding: 60px 0 80px;
+    }
+    .req-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .req-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-size: 0.9rem;
+    }
+    .req-item span:first-child {
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    /* ============================================================
+       FOOTER
+       ============================================================ */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    footer a {
+      color: var(--text-muted);
+      transition: color 0.2s;
+    }
+    footer a:hover { color: var(--primary); }
+
+    /* ============================================================
+       RESPONSIVE
+       ============================================================ */
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .latest-release { padding: 24px 20px; }
+      .hero-buttons { flex-direction: column; align-items: center; }
+      .release-table th:nth-child(3),
+      .release-table td:nth-child(3) { display: none; }
+    }
+
+    /* Fade-in animation */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background glows -->
+  <div class="bg-glow"></div>
+  <div class="bg-glow-2"></div>
+
+  <!-- NAV -->
+  <nav>
+    <div class="container">
+      <a href="#" class="nav-brand">
+        <svg class="logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#7C3AED"/>
+              <stop offset="100%" style="stop-color:#EC4899"/>
+            </linearGradient>
+          </defs>
+          <path d="M50 5 L90 25 L90 65 Q90 90 50 95 Q10 90 10 65 L10 25 Z" fill="url(#logo-grad)"/>
+          <text x="50" y="66" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="white" text-anchor="middle">MR</text>
+        </svg>
+        MRVPN
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#downloads">Downloads</a>
+        <a href="#requirements">Requirements</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-inner">
+      <svg class="logo-hero" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="hero-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#7C3AED"/>
+            <stop offset="100%" style="stop-color:#EC4899"/>
+          </linearGradient>
+        </defs>
+        <path d="M50 5 L90 25 L90 65 Q90 90 50 95 Q10 90 10 65 L10 25 Z" fill="url(#hero-grad)"/>
+        <text x="50" y="66" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="white" text-anchor="middle">MR</text>
+      </svg>
+
+      <div id="hero-badge" class="version-badge">Loading...</div>
+
+      <h1>
+        Your Privacy,<br>
+        <span class="gradient-text">Your Control.</span>
+      </h1>
+      <p>
+        A lightweight Windows VPN client powered by sing-box
+        with VLESS and Hysteria2 protocol support.
+      </p>
+
+      <div class="hero-buttons">
+        <a id="hero-download-btn" href="#downloads" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download for Windows
+        </a>
+        <a href="#features" class="btn btn-secondary">
+          Learn More
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features fade-in" id="features">
+    <div class="container">
+      <h2 class="section-title">Why MRVPN?</h2>
+      <p class="section-subtitle">Built for speed, security, and simplicity.</p>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">&#9889;</div>
+          <h3>Blazing Fast</h3>
+          <p>Powered by sing-box engine with QUIC transport, gRPC multiplexing, and optimized routing for minimal latency.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128274;</div>
+          <h3>Truly Secure</h3>
+          <p>VLESS with Reality and uTLS fingerprinting. Hysteria2 with QUIC encryption. Your traffic stays private.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#9757;</div>
+          <h3>One-Click Connect</h3>
+          <p>Paste a link, click connect. No complex configuration needed. Beautiful interface with dark and light themes.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128256;</div>
+          <h3>Split Tunneling</h3>
+          <p>Route specific apps or domains through or outside the VPN. Full control over your traffic.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DOWNLOADS -->
+  <section class="downloads fade-in" id="downloads">
+    <div class="container">
+      <h2 class="section-title">Downloads</h2>
+      <p class="section-subtitle">Get the latest version or browse previous releases.</p>
+
+      <div id="latest-release">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading releases...</p>
+        </div>
+      </div>
+
+      <div id="prev-releases"></div>
+    </div>
+  </section>
+
+  <!-- REQUIREMENTS -->
+  <section class="requirements fade-in" id="requirements">
+    <div class="container">
+      <h2 class="section-title">Requirements</h2>
+      <p class="section-subtitle">What you need to run MRVPN.</p>
+      <div class="req-grid">
+        <div class="req-item">
+          <span>&#128187;</span>
+          <span>Windows 10 or 11 (x64)</span>
+        </div>
+        <div class="req-item">
+          <span>&#128272;</span>
+          <span>Administrator privileges</span>
+        </div>
+        <div class="req-item">
+          <span>&#128190;</span>
+          <span>~50 MB disk space</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <p>&copy; 2025 MRVPN. Built with &#10084;&#65039; for privacy.</p>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+       JAVASCRIPT
+       ============================================================ -->
+  <script>
+    const REPO = 'MRiazIsr/flutter-go-mrvpn-app';
+    const API  = `https://api.github.com/repos/${REPO}/releases`;
+
+    // --- Helpers ---
+    function formatDate(iso) {
+      const d = new Date(iso);
+      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function formatSize(bytes) {
+      if (!bytes) return '';
+      const mb = bytes / (1024 * 1024);
+      return `${mb.toFixed(1)} MB`;
+    }
+
+    function findAsset(assets, keyword, ext) {
+      return assets.find(a => {
+        const name = a.name.toLowerCase();
+        return name.includes(keyword) && name.endsWith(ext);
+      });
+    }
+
+    // --- Render latest release ---
+    function renderLatest(release) {
+      const version = release.tag_name.replace(/^v/, '');
+      const installer = findAsset(release.assets, 'setup', '.exe');
+      const zip = findAsset(release.assets, 'windows', '.zip');
+
+      // Update hero badge
+      document.getElementById('hero-badge').textContent = `Latest: v${version}`;
+
+      // Update hero download button
+      if (installer || zip) {
+        const btn = document.getElementById('hero-download-btn');
+        const best = installer || zip;
+        btn.href = best.browser_download_url;
+        btn.textContent = '';
+        btn.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download v${version}`;
+      }
+
+      let assetsHtml = '';
+      if (installer) {
+        assetsHtml += `<a href="${installer.browser_download_url}" class="btn btn-primary btn-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Installer (${formatSize(installer.size)})</a>`;
+      }
+      if (zip) {
+        assetsHtml += `<a href="${zip.browser_download_url}" class="btn btn-secondary btn-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Portable ZIP (${formatSize(zip.size)})</a>`;
+      }
+
+      const notesText = release.body ? release.body.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+
+      document.getElementById('latest-release').innerHTML = `
+        <div class="latest-release">
+          <div class="latest-header">
+            <h3>${release.name || 'MRVPN v' + version}</h3>
+            <span class="latest-date">${formatDate(release.published_at)}</span>
+          </div>
+          <div class="latest-assets">${assetsHtml}</div>
+          ${notesText ? `<div class="release-notes">${notesText}</div>` : ''}
+        </div>`;
+    }
+
+    // --- Render previous releases ---
+    function renderPrevious(releases) {
+      if (releases.length === 0) return;
+
+      let rows = '';
+      for (const r of releases) {
+        const version = r.tag_name.replace(/^v/, '');
+        const installer = findAsset(r.assets, 'setup', '.exe');
+        const zip = findAsset(r.assets, 'windows', '.zip');
+        const best = installer || zip;
+        const dlLink = best
+          ? `<a href="${best.browser_download_url}" class="btn btn-secondary btn-sm">Download</a>`
+          : `<a href="${r.html_url}" class="btn btn-secondary btn-sm">View</a>`;
+
+        rows += `
+          <tr>
+            <td><span class="tag-chip">${r.tag_name}</span></td>
+            <td>${r.name || 'MRVPN v' + version}</td>
+            <td>${formatDate(r.published_at)}</td>
+            <td>${dlLink}</td>
+          </tr>`;
+      }
+
+      document.getElementById('prev-releases').innerHTML = `
+        <div class="prev-releases">
+          <h3>Previous Releases</h3>
+          <table class="release-table">
+            <thead><tr><th>Version</th><th>Name</th><th>Date</th><th></th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }
+
+    // --- Error state ---
+    function renderError() {
+      document.getElementById('hero-badge').textContent = 'MRVPN for Windows';
+      document.getElementById('latest-release').innerHTML = `
+        <div class="error-state">
+          <p style="font-size:1.1rem; margin-bottom: 12px;">Downloads are available on GitHub Releases.</p>
+          <a href="https://github.com/${REPO}/releases" class="btn btn-primary btn-sm" target="_blank" rel="noopener">
+            View on GitHub
+          </a>
+        </div>`;
+    }
+
+    // --- Fetch releases ---
+    async function loadReleases() {
+      try {
+        const res = await fetch(API, {
+          headers: { 'Accept': 'application/vnd.github.v3+json' }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const releases = await res.json();
+
+        if (releases.length === 0) {
+          renderError();
+          return;
+        }
+
+        renderLatest(releases[0]);
+        if (releases.length > 1) {
+          renderPrevious(releases.slice(1));
+        }
+      } catch (e) {
+        console.warn('Failed to load releases:', e);
+        renderError();
+      }
+    }
+
+    // --- Fade-in on scroll ---
+    function initFadeIn() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      }, { threshold: 0.1 });
+
+      document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+    }
+
+    // --- Init ---
+    document.addEventListener('DOMContentLoaded', () => {
+      loadReleases();
+      initFadeIn();
+    });
+  </script>
+</body>
+</html>
