@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MRVPN — Fast & Secure VPN for Windows</title>
   <meta name="description" content="Lightweight Windows VPN client powered by sing-box with VLESS and Hysteria2 support.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' style='stop-color:%237C3AED'/><stop offset='100%25' style='stop-color:%23EC4899'/></linearGradient></defs><path d='M50 5 L90 25 L90 65 Q90 90 50 95 Q10 90 10 65 L10 25 Z' fill='url(%23g)'/><text x='50' y='68' font-family='Arial,sans-serif' font-size='32' font-weight='bold' fill='white' text-anchor='middle'>MR</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' style='stop-color:%237C3AED'/><stop offset='100%25' style='stop-color:%23EC4899'/></linearGradient></defs><path d='M10 8 L90 8 L90 55 Q90 88 50 95 Q10 88 10 55 Z' fill='url(%23g)'/><text x='50' y='62' font-family='Arial,sans-serif' font-size='32' font-weight='bold' fill='white' text-anchor='middle'>MR</text></svg>">
   <style>
     /* ============================================================
        RESET & BASE
@@ -212,21 +212,6 @@
     .btn svg { width: 18px; height: 18px; }
 
     /* ============================================================
-       VERSION BADGE
-       ============================================================ */
-    .version-badge {
-      display: inline-block;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      background: rgba(124,58,237,0.15);
-      color: var(--primary);
-      border: 1px solid rgba(124,58,237,0.25);
-      margin-bottom: 12px;
-    }
-
-    /* ============================================================
        FEATURES
        ============================================================ */
     .features {
@@ -283,108 +268,6 @@
     }
 
     /* ============================================================
-       DOWNLOADS
-       ============================================================ */
-    .downloads {
-      padding: 80px 0 100px;
-    }
-
-    .latest-release {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 36px;
-      margin-bottom: 48px;
-    }
-    .latest-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-    .latest-header h3 {
-      font-size: 1.4rem;
-      font-weight: 700;
-    }
-    .latest-date {
-      color: var(--text-muted);
-      font-size: 0.85rem;
-    }
-    .latest-assets {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
-    }
-    .release-notes {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-      line-height: 1.6;
-      border-top: 1px solid var(--border);
-      padding-top: 16px;
-      white-space: pre-line;
-    }
-
-    /* Previous releases */
-    .prev-releases h3 {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin-bottom: 16px;
-      color: var(--text-muted);
-    }
-    .release-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .release-table th {
-      text-align: left;
-      padding: 10px 16px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      border-bottom: 1px solid var(--border);
-    }
-    .release-table td {
-      padding: 12px 16px;
-      font-size: 0.9rem;
-      border-bottom: 1px solid rgba(124,58,237,0.08);
-    }
-    .release-table tr:hover td {
-      background: rgba(124,58,237,0.04);
-    }
-    .tag-chip {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 6px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      background: rgba(124,58,237,0.12);
-      color: var(--primary);
-    }
-
-    /* Loading / error states */
-    .loading-state, .error-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--text-muted);
-    }
-    .spinner {
-      display: inline-block;
-      width: 32px;
-      height: 32px;
-      border: 3px solid var(--border);
-      border-top-color: var(--primary);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-bottom: 12px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ============================================================
        REQUIREMENTS
        ============================================================ */
     .requirements {
@@ -433,10 +316,7 @@
        ============================================================ */
     @media (max-width: 640px) {
       .nav-links { display: none; }
-      .latest-release { padding: 24px 20px; }
       .hero-buttons { flex-direction: column; align-items: center; }
-      .release-table th:nth-child(3),
-      .release-table td:nth-child(3) { display: none; }
     }
 
     /* Fade-in animation */
@@ -468,14 +348,13 @@
               <stop offset="100%" style="stop-color:#EC4899"/>
             </linearGradient>
           </defs>
-          <path d="M50 5 L90 25 L90 65 Q90 90 50 95 Q10 90 10 65 L10 25 Z" fill="url(#logo-grad)"/>
-          <text x="50" y="66" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="white" text-anchor="middle">MR</text>
+          <path d="M10 8 L90 8 L90 55 Q90 88 50 95 Q10 88 10 55 Z" fill="url(#logo-grad)"/>
+          <text x="50" y="62" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="white" text-anchor="middle">MR</text>
         </svg>
         MRVPN
       </a>
       <div class="nav-links">
         <a href="#features">Features</a>
-        <a href="#downloads">Downloads</a>
         <a href="#requirements">Requirements</a>
       </div>
     </div>
@@ -491,11 +370,9 @@
             <stop offset="100%" style="stop-color:#EC4899"/>
           </linearGradient>
         </defs>
-        <path d="M50 5 L90 25 L90 65 Q90 90 50 95 Q10 90 10 65 L10 25 Z" fill="url(#hero-grad)"/>
-        <text x="50" y="66" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="white" text-anchor="middle">MR</text>
+        <path d="M10 8 L90 8 L90 55 Q90 88 50 95 Q10 88 10 55 Z" fill="url(#hero-grad)"/>
+        <text x="50" y="62" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="white" text-anchor="middle">MR</text>
       </svg>
-
-      <div id="hero-badge" class="version-badge">Loading...</div>
 
       <h1>
         Your Privacy,<br>
@@ -507,9 +384,9 @@
       </p>
 
       <div class="hero-buttons">
-        <a id="hero-download-btn" href="#downloads" class="btn btn-primary">
+        <a id="hero-download-btn" href="https://github.com/MRiazIsr/flutter-go-mrvpn-app/releases/latest" class="btn btn-primary" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Download for Windows
+          Download
         </a>
         <a href="#features" class="btn btn-secondary">
           Learn More
@@ -549,23 +426,6 @@
     </div>
   </section>
 
-  <!-- DOWNLOADS -->
-  <section class="downloads fade-in" id="downloads">
-    <div class="container">
-      <h2 class="section-title">Downloads</h2>
-      <p class="section-subtitle">Get the latest version or browse previous releases.</p>
-
-      <div id="latest-release">
-        <div class="loading-state">
-          <div class="spinner"></div>
-          <p>Loading releases...</p>
-        </div>
-      </div>
-
-      <div id="prev-releases"></div>
-    </div>
-  </section>
-
   <!-- REQUIREMENTS -->
   <section class="requirements fade-in" id="requirements">
     <div class="container">
@@ -599,159 +459,13 @@
        JAVASCRIPT
        ============================================================ -->
   <script>
-    const REPO = 'MRiazIsr/flutter-go-mrvpn-app';
-    const API  = `https://api.github.com/repos/${REPO}/releases`;
-
-    // --- Helpers ---
-    function formatDate(iso) {
-      const d = new Date(iso);
-      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-    }
-
-    function formatSize(bytes) {
-      if (!bytes) return '';
-      const mb = bytes / (1024 * 1024);
-      return `${mb.toFixed(1)} MB`;
-    }
-
-    function findAsset(assets, keyword, ext) {
-      return assets.find(a => {
-        const name = a.name.toLowerCase();
-        return name.includes(keyword) && name.endsWith(ext);
-      });
-    }
-
-    // --- Render latest release ---
-    function renderLatest(release) {
-      const version = release.tag_name.replace(/^v/, '');
-      const installer = findAsset(release.assets, 'setup', '.exe');
-      const zip = findAsset(release.assets, 'windows', '.zip');
-
-      // Update hero badge
-      document.getElementById('hero-badge').textContent = `Latest: v${version}`;
-
-      // Update hero download button
-      if (installer || zip) {
-        const btn = document.getElementById('hero-download-btn');
-        const best = installer || zip;
-        btn.href = best.browser_download_url;
-        btn.textContent = '';
-        btn.innerHTML = `
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Download v${version}`;
-      }
-
-      let assetsHtml = '';
-      if (installer) {
-        assetsHtml += `<a href="${installer.browser_download_url}" class="btn btn-primary btn-sm">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Installer (${formatSize(installer.size)})</a>`;
-      }
-      if (zip) {
-        assetsHtml += `<a href="${zip.browser_download_url}" class="btn btn-secondary btn-sm">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Portable ZIP (${formatSize(zip.size)})</a>`;
-      }
-
-      const notesText = release.body ? release.body.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
-
-      document.getElementById('latest-release').innerHTML = `
-        <div class="latest-release">
-          <div class="latest-header">
-            <h3>${release.name || 'MRVPN v' + version}</h3>
-            <span class="latest-date">${formatDate(release.published_at)}</span>
-          </div>
-          <div class="latest-assets">${assetsHtml}</div>
-          ${notesText ? `<div class="release-notes">${notesText}</div>` : ''}
-        </div>`;
-    }
-
-    // --- Render previous releases ---
-    function renderPrevious(releases) {
-      if (releases.length === 0) return;
-
-      let rows = '';
-      for (const r of releases) {
-        const version = r.tag_name.replace(/^v/, '');
-        const installer = findAsset(r.assets, 'setup', '.exe');
-        const zip = findAsset(r.assets, 'windows', '.zip');
-        const best = installer || zip;
-        const dlLink = best
-          ? `<a href="${best.browser_download_url}" class="btn btn-secondary btn-sm">Download</a>`
-          : `<a href="${r.html_url}" class="btn btn-secondary btn-sm">View</a>`;
-
-        rows += `
-          <tr>
-            <td><span class="tag-chip">${r.tag_name}</span></td>
-            <td>${r.name || 'MRVPN v' + version}</td>
-            <td>${formatDate(r.published_at)}</td>
-            <td>${dlLink}</td>
-          </tr>`;
-      }
-
-      document.getElementById('prev-releases').innerHTML = `
-        <div class="prev-releases">
-          <h3>Previous Releases</h3>
-          <table class="release-table">
-            <thead><tr><th>Version</th><th>Name</th><th>Date</th><th></th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>`;
-    }
-
-    // --- Error state ---
-    function renderError() {
-      document.getElementById('hero-badge').textContent = 'MRVPN for Windows';
-      document.getElementById('latest-release').innerHTML = `
-        <div class="error-state">
-          <p style="font-size:1.1rem; margin-bottom: 12px;">Downloads are available on GitHub Releases.</p>
-          <a href="https://github.com/${REPO}/releases" class="btn btn-primary btn-sm" target="_blank" rel="noopener">
-            View on GitHub
-          </a>
-        </div>`;
-    }
-
-    // --- Fetch releases ---
-    async function loadReleases() {
-      try {
-        const res = await fetch(API, {
-          headers: { 'Accept': 'application/vnd.github.v3+json' }
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const releases = await res.json();
-
-        if (releases.length === 0) {
-          renderError();
-          return;
-        }
-
-        renderLatest(releases[0]);
-        if (releases.length > 1) {
-          renderPrevious(releases.slice(1));
-        }
-      } catch (e) {
-        console.warn('Failed to load releases:', e);
-        renderError();
-      }
-    }
-
-    // --- Fade-in on scroll ---
-    function initFadeIn() {
+    document.addEventListener('DOMContentLoaded', () => {
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('visible');
-          }
+          if (entry.isIntersecting) entry.target.classList.add('visible');
         });
       }, { threshold: 0.1 });
-
       document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
-    }
-
-    // --- Init ---
-    document.addEventListener('DOMContentLoaded', () => {
-      loadReleases();
-      initFadeIn();
     });
   </script>
 </body>
