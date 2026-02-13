@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import 'providers/locale_provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/update_provider.dart';
+import 'services/update_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/servers_screen.dart';
 import 'screens/split_tunnel_screen.dart';
@@ -11,6 +13,7 @@ import 'screens/settings_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/app_header.dart';
 import 'widgets/sidebar_nav.dart';
+import 'widgets/update_dialog.dart';
 
 // Shell route key for the scaffold with sidebar
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -73,13 +76,39 @@ class MRVPNApp extends ConsumerWidget {
   }
 }
 
-class _AppShell extends StatelessWidget {
+class _AppShell extends ConsumerStatefulWidget {
   final Widget child;
 
   const _AppShell({required this.child});
 
   @override
+  ConsumerState<_AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<_AppShell> {
+  bool _updateChecked = false;
+
+  @override
   Widget build(BuildContext context) {
+    // Listen for update check results and show dialog once.
+    ref.listen<AsyncValue<UpdateInfo?>>(updateCheckProvider, (prev, next) {
+      if (_updateChecked) return;
+      next.whenData((info) {
+        if (info != null && mounted) {
+          _updateChecked = true;
+          final locale = ref.read(localeProvider);
+          showDialog(
+            context: context,
+            builder: (_) => UpdateDialog(info: info, locale: locale),
+          ).then((result) {
+            if (result == 'skip') {
+              skipVersion(info.version);
+            }
+          });
+        }
+      });
+    });
+
     return Scaffold(
       body: Column(
         children: [
@@ -89,7 +118,7 @@ class _AppShell extends StatelessWidget {
               children: [
                 const SidebarNav(),
                 const VerticalDivider(width: 1, thickness: 1),
-                Expanded(child: child),
+                Expanded(child: widget.child),
               ],
             ),
           ),

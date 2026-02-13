@@ -88,9 +88,21 @@ class S {
     'dns': 'DNS',
     'mtu': 'MTU',
     'about': 'About',
-    'version': 'Version 1.0.0',
     'aboutDesc':
         'A lightweight Windows VPN client powered by sing-box with VLESS and Hysteria2 support.',
+
+    // Updates
+    'updateAvailable': 'Update Available',
+    'updateAvailableDesc': 'A new version of MRVPN is available.',
+    'currentVersion': 'Current',
+    'newVersion': 'New',
+    'download': 'Download',
+    'later': 'Later',
+    'skipVersion': 'Skip this version',
+    'checkForUpdates': 'Check for updates',
+    'checking': 'Checking...',
+    'upToDate': 'You\'re up to date!',
+    'updateCheckFailed': 'Could not check for updates',
 
     // Sidebar
     'home': 'Home',
@@ -172,9 +184,21 @@ class S {
     'dns': 'DNS',
     'mtu': 'MTU',
     'about': 'О приложении',
-    'version': 'Версия 1.0.0',
     'aboutDesc':
         'Лёгкий VPN-клиент для Windows на базе sing-box с поддержкой VLESS и Hysteria2.',
+
+    // Updates
+    'updateAvailable': 'Доступно обновление',
+    'updateAvailableDesc': 'Доступна новая версия MRVPN.',
+    'currentVersion': 'Текущая',
+    'newVersion': 'Новая',
+    'download': 'Скачать',
+    'later': 'Позже',
+    'skipVersion': 'Пропустить версию',
+    'checkForUpdates': 'Проверить обновления',
+    'checking': 'Проверка...',
+    'upToDate': 'У вас последняя версия!',
+    'updateCheckFailed': 'Не удалось проверить обновления',
 
     // Sidebar
     'home': 'Главная',
