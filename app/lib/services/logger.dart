@@ -1,14 +1,19 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 /// Simple file logger for diagnosing startup freezes.
 ///
-/// Uses synchronous file writes so that every line is guaranteed to be
-/// on disk immediately — even if the main thread blocks right after.
+/// Only active in debug/profile builds. In release builds, logging is
+/// completely disabled to prevent sensitive data leakage.
 class AppLogger {
   static String? _logPath;
 
   /// Initialize the logger. Call once at app start.
+  /// In release builds, this is a no-op.
   static void init() {
+    if (kReleaseMode) return;
+
     try {
       final exeDir = File(Platform.resolvedExecutable).parent.path;
       _logPath = '$exeDir${Platform.pathSeparator}mrvpn_debug.log';
@@ -27,7 +32,10 @@ class AppLogger {
   }
 
   /// Write a log line with timestamp and tag. Fully synchronous.
+  /// In release builds, this is a no-op.
   static void log(String tag, String message) {
+    if (kReleaseMode) return;
+
     final now = DateTime.now();
     final ts = '${now.hour.toString().padLeft(2, '0')}:'
         '${now.minute.toString().padLeft(2, '0')}:'
@@ -45,11 +53,11 @@ class AppLogger {
       }
     } catch (_) {}
 
-    // Also print to console (visible in debug mode).
+    // Print to console only in debug mode.
     // ignore: avoid_print
     print(line);
   }
 
-  /// The path to the log file.
+  /// The path to the log file (null in release builds).
   static String? get logPath => _logPath;
 }

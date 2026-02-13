@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
+	"sync"
 	"time"
 
 	"github.com/mriaz/vpn-core/internal/parser"
@@ -17,7 +17,9 @@ import (
 type Handler struct {
 	engine       *vpn.Engine
 	stateMachine *vpn.StateMachine
+	mu           sync.RWMutex
 	splitConfig  *SplitTunnelConfig
+	ShutdownCh   chan struct{}
 }
 
 // NewHandler creates a new RPC handler.
@@ -28,6 +30,7 @@ func NewHandler(engine *vpn.Engine, sm *vpn.StateMachine) *Handler {
 		splitConfig: &SplitTunnelConfig{
 			Mode: "off",
 		},
+		ShutdownCh: make(chan struct{}),
 	}
 }
 
@@ -64,13 +67,19 @@ func (h *Handler) Handle(req *Request) *Response {
 func (h *Handler) handleConnect(req *Request) *Response {
 	var params ConnectParams
 	if err := json.Unmarshal(req.Params, &params); err != nil {
-		return errorResponse(req.ID, ErrCodeInvalidParams, "invalid params: "+err.Error())
+		return errorResponse(req.ID, ErrCodeInvalidParams, "invalid parameters")
+	}
+
+	// Validate link length
+	if len(params.Link) > 2048 {
+		return errorResponse(req.ID, ErrCodeInvalidParams, "server link is too long")
 	}
 
 	// Parse the server link
 	serverCfg, err := parser.ParseLink(params.Link)
 	if err != nil {
-		return errorResponse(req.ID, ErrCodeInvalidParams, "failed to parse link: "+err.Error())
+		log.Printf("vpn.connect: failed to parse link: %v", err)
+		return errorResponse(req.ID, ErrCodeInvalidParams, "failed to parse server link")
 	}
 
 	// Build VPN config
@@ -83,14 +92,17 @@ func (h *Handler) handleConnect(req *Request) *Response {
 
 	// Use stored split tunnel config if not provided in connect params
 	if cfg.SplitTunnelMode == "" {
+		h.mu.RLock()
 		cfg.SplitTunnelMode = h.splitConfig.Mode
 		cfg.SplitTunnelApps = h.splitConfig.Apps
 		cfg.SplitTunnelDomains = h.splitConfig.Domains
 		cfg.SplitTunnelInvert = h.splitConfig.Invert
+		h.mu.RUnlock()
 	}
 
 	if err := h.engine.Connect(cfg); err != nil {
-		return errorResponse(req.ID, ErrCodeInternal, err.Error())
+		log.Printf("vpn.connect: connection failed: %v", err)
+		return errorResponse(req.ID, ErrCodeInternal, "connection failed")
 	}
 
 	return &Response{
@@ -101,7 +113,8 @@ func (h *Handler) handleConnect(req *Request) *Response {
 
 func (h *Handler) handleDisconnect(req *Request) *Response {
 	if err := h.engine.Disconnect(); err != nil {
-		return errorResponse(req.ID, ErrCodeInternal, err.Error())
+		log.Printf("vpn.disconnect failed: %v", err)
+		return errorResponse(req.ID, ErrCodeInternal, "disconnect failed")
 	}
 	return &Response{
 		ID:     req.ID,
@@ -139,7 +152,8 @@ func (h *Handler) handleStatus(req *Request) *Response {
 func (h *Handler) handleAppsList(req *Request) *Response {
 	apps, err := splittunnel.ListInstalledApps()
 	if err != nil {
-		return errorResponse(req.ID, ErrCodeInternal, "failed to list apps: "+err.Error())
+		log.Printf("apps.list failed: %v", err)
+		return errorResponse(req.ID, ErrCodeInternal, "failed to list apps")
 	}
 	return &Response{
 		ID:     req.ID,
@@ -150,9 +164,20 @@ func (h *Handler) handleAppsList(req *Request) *Response {
 func (h *Handler) handleSplitSetConfig(req *Request) *Response {
 	var config SplitTunnelConfig
 	if err := json.Unmarshal(req.Params, &config); err != nil {
-		return errorResponse(req.ID, ErrCodeInvalidParams, "invalid params: "+err.Error())
+		return errorResponse(req.ID, ErrCodeInvalidParams, "invalid parameters")
 	}
+
+	// Validate mode
+	switch config.Mode {
+	case "off", "app", "domain":
+		// valid
+	default:
+		return errorResponse(req.ID, ErrCodeInvalidParams, "invalid mode: must be off, app, or domain")
+	}
+
+	h.mu.Lock()
 	h.splitConfig = &config
+	h.mu.Unlock()
 	return &Response{
 		ID:     req.ID,
 		Result: map[string]interface{}{"ok": true},
@@ -160,23 +185,48 @@ func (h *Handler) handleSplitSetConfig(req *Request) *Response {
 }
 
 func (h *Handler) handleSplitGetConfig(req *Request) *Response {
+	h.mu.RLock()
+	cfg := h.splitConfig
+	h.mu.RUnlock()
 	return &Response{
 		ID:     req.ID,
-		Result: h.splitConfig,
+		Result: cfg,
 	}
+}
+
+// isPrivateAddress checks if a host resolves to a private/loopback/link-local IP.
+func isPrivateAddress(host string) bool {
+	ip := net.ParseIP(host)
+	if ip == nil {
+		// Hostname — resolve it first
+		addrs, err := net.LookupIP(host)
+		if err != nil || len(addrs) == 0 {
+			return true // block if unresolvable
+		}
+		ip = addrs[0]
+	}
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified()
 }
 
 func (h *Handler) handlePing(req *Request) *Response {
 	var params PingParams
 	if err := json.Unmarshal(req.Params, &params); err != nil {
-		return errorResponse(req.ID, ErrCodeInvalidParams, "invalid params: "+err.Error())
+		return errorResponse(req.ID, ErrCodeInvalidParams, "invalid parameters")
 	}
 
 	serverCfg, err := parser.ParseLink(params.Link)
 	if err != nil {
 		return &Response{
 			ID:     req.ID,
-			Result: PingResult{Error: "failed to parse link: " + err.Error()},
+			Result: PingResult{Error: "failed to parse link"},
+		}
+	}
+
+	// SSRF protection: block private/loopback addresses
+	if isPrivateAddress(serverCfg.Address) {
+		return &Response{
+			ID:     req.ID,
+			Result: PingResult{Error: "cannot ping private addresses"},
 		}
 	}
 
@@ -187,7 +237,7 @@ func (h *Handler) handlePing(req *Request) *Response {
 	if err != nil {
 		return &Response{
 			ID:     req.ID,
-			Result: PingResult{Error: "connection failed: " + err.Error()},
+			Result: PingResult{Error: "connection failed"},
 		}
 	}
 	conn.Close()
@@ -201,13 +251,10 @@ func (h *Handler) handlePing(req *Request) *Response {
 
 func (h *Handler) handleShutdown(req *Request) *Response {
 	log.Printf("Shutdown requested via IPC")
-	// Disconnect VPN if active
-	h.engine.Disconnect()
-	// Schedule process exit after sending response
+	// Signal main goroutine for graceful shutdown (runs deferred cleanup)
 	go func() {
 		time.Sleep(500 * time.Millisecond)
-		log.Printf("Exiting service process")
-		os.Exit(0)
+		close(h.ShutdownCh)
 	}()
 	return &Response{
 		ID:     req.ID,

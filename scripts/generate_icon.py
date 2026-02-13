@@ -184,16 +184,21 @@ def build_ico_bmp(images):
 
 
 def main():
+    import os
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    resources_dir = os.path.join(project_root, 'app', 'windows', 'runner', 'resources')
+
     sizes = [256, 128, 64, 48, 32, 16]
     imgs = [generate_icon(s) for s in sizes]
 
-    ico = r'C:\Users\Mark\flutter-go-vpn-app\app\windows\runner\resources\app_icon.ico'
+    ico = os.path.join(resources_dir, 'app_icon.ico')
     ico_data = build_ico_bmp(imgs)
     with open(ico, 'wb') as f:
         f.write(ico_data)
     print(f'ICO: {ico} ({len(ico_data):,} bytes, {len(imgs)} entries, BMP format)')
 
-    png = r'C:\Users\Mark\flutter-go-vpn-app\app\windows\runner\resources\app_icon.png'
+    png = os.path.join(resources_dir, 'app_icon.png')
     generate_icon(512).save(png, format='PNG')
     print(f'PNG: {png}')
 

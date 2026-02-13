@@ -1,6 +1,8 @@
 package vpn
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -31,9 +33,10 @@ func DefaultConfig() *Config {
 }
 
 // BuildSingBoxConfig builds a complete sing-box JSON configuration.
-func BuildSingBoxConfig(cfg *Config) ([]byte, error) {
+// Returns the config JSON, the Clash API secret, and an error.
+func BuildSingBoxConfig(cfg *Config) ([]byte, string, error) {
 	if cfg.Server == nil {
-		return nil, fmt.Errorf("no server configuration provided")
+		return nil, "", fmt.Errorf("no server configuration provided")
 	}
 
 	// Build outbound based on protocol
@@ -44,8 +47,15 @@ func BuildSingBoxConfig(cfg *Config) ([]byte, error) {
 	case "hysteria2":
 		proxyOutbound = parser.BuildHysteria2Outbound(cfg.Server)
 	default:
-		return nil, fmt.Errorf("unsupported protocol: %s", cfg.Server.Protocol)
+		return nil, "", fmt.Errorf("unsupported protocol: %s", cfg.Server.Protocol)
 	}
+
+	// Generate a random secret for the Clash API
+	secretBytes := make([]byte, 16)
+	if _, err := rand.Read(secretBytes); err != nil {
+		return nil, "", fmt.Errorf("failed to generate clash API secret: %w", err)
+	}
+	clashSecret := hex.EncodeToString(secretBytes)
 
 	// DNS servers
 	dnsServers := buildDNSConfig(cfg)
@@ -99,11 +109,16 @@ func BuildSingBoxConfig(cfg *Config) ([]byte, error) {
 		"experimental": map[string]interface{}{
 			"clash_api": map[string]interface{}{
 				"external_controller": "127.0.0.1:9090",
+				"secret":              clashSecret,
 			},
 		},
 	}
 
-	return json.MarshalIndent(config, "", "  ")
+	jsonBytes, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return nil, "", err
+	}
+	return jsonBytes, clashSecret, nil
 }
 
 func buildDNSConfig(cfg *Config) map[string]interface{} {
