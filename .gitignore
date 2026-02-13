@@ -1,0 +1,60 @@
+# Build outputs
+dist/
+app/build/
+core/*.exe
+
+# Flutter/Dart
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.metadata
+app/.packages
+**/doc/api/
+**/ios/Flutter/.last_build_id
+
+# Go
+core/vendor/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+nul
+
+# Logs
+*.log
+
+# Secrets / local config
+.env
+.env.*
+*.key
+*.pem
+
+# Claude Code local settings
+.claude/settings.local.json
+.claude/plans/
+
+# Installer output
+build/
+installer/output/
+
+# Python
+__pycache__/
+*.pyc
+
+# Windows build artifacts
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib

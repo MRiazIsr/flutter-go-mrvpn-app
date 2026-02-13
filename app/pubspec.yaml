@@ -1,0 +1,51 @@
+name: mriaz_vpn
+description: "MRVPN - Windows VPN client powered by sing-box"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Navigation
+  go_router: ^14.8.1
+
+  # Window management
+  window_manager: ^0.4.3
+
+  # System tray
+  system_tray: ^2.0.3
+
+  # Auto-start with Windows
+  launch_at_startup: ^0.3.1
+
+  # Animations
+  flutter_animate: ^4.5.2
+
+  # Local storage
+  shared_preferences: ^2.5.3
+
+  # Google Fonts
+  google_fonts: ^6.2.1
+
+  # FFI for named pipe communication
+  ffi: ^2.1.4
+
+  # Charts (for future bandwidth visualization)
+  fl_chart: ^0.70.2
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
