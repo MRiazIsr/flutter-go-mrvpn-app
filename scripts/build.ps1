@@ -29,25 +29,55 @@ Write-Host "Project root: $ProjectRoot"
 Write-Host ""
 
 # ---- Stop running app if needed (prevents locked file errors) ----
-# The service runs elevated, so we use taskkill which can kill elevated processes
-# when the build script is run from an elevated prompt, or via the /F flag.
+# The service runs elevated — taskkill from a non-admin shell cannot kill it.
+# Instead, send "service.shutdown" via the named pipe (IPC), which triggers a
+# graceful exit from inside the elevated process. No admin rights needed.
 $uiProcess = Get-Process -Name "MRVPN" -ErrorAction SilentlyContinue
 $svcProcess = Get-Process -Name "MRVPN-service" -ErrorAction SilentlyContinue
 
 if ($uiProcess -or $svcProcess) {
     Write-Host "[*] Stopping running MRVPN processes..." -ForegroundColor Yellow
-    # Use taskkill /F for elevated processes; also try Stop-Process as fallback
-    & taskkill /F /IM MRVPN-service.exe 2>$null
-    & taskkill /F /IM MRVPN.exe 2>$null
+
+    # 1) Graceful IPC shutdown (works without elevation)
+    try {
+        $pipe = New-Object System.IO.Pipes.NamedPipeClientStream('.', 'MRVPN', [System.IO.Pipes.PipeDirection]::InOut)
+        $pipe.Connect(2000)  # 2 second timeout
+        $msg = [System.Text.Encoding]::UTF8.GetBytes('{"id":"0","method":"service.shutdown"}' + "`n")
+        $pipe.Write($msg, 0, $msg.Length)
+        $pipe.Flush()
+        $pipe.Close()
+        Write-Host "  -> Sent shutdown via IPC pipe" -ForegroundColor DarkGray
+    } catch {
+        Write-Host "  -> IPC pipe not available, trying fallback..." -ForegroundColor DarkGray
+    }
+
+    # 2) Also stop the UI process (non-elevated, normal Stop-Process works)
     Stop-Process -Name "MRVPN" -Force -ErrorAction SilentlyContinue
-    Stop-Process -Name "MRVPN-service" -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 2
-    # Verify they're actually stopped
+
+    # 3) Wait for graceful exit
+    $waited = 0
+    while ($waited -lt 5) {
+        Start-Sleep -Milliseconds 500
+        $waited++
+        $still = Get-Process -Name "MRVPN-service" -ErrorAction SilentlyContinue
+        if (-not $still) { break }
+    }
+
+    # 4) If still alive, try Windows Service stop + taskkill as last resort
     $still = Get-Process -Name "MRVPN-service" -ErrorAction SilentlyContinue
     if ($still) {
-        Write-Host "  -> WARNING: MRVPN-service still running (elevated). Run this script as Admin." -ForegroundColor Red
-        throw "Cannot stop elevated MRVPN-service.exe. Please run PowerShell as Administrator."
+        Write-Host "  -> Service still running, trying Stop-Service / taskkill..." -ForegroundColor Yellow
+        Stop-Service -Name "MRVPN" -Force -ErrorAction SilentlyContinue
+        & taskkill /F /IM MRVPN-service.exe 2>$null
+        Start-Sleep -Seconds 2
+
+        $still = Get-Process -Name "MRVPN-service" -ErrorAction SilentlyContinue
+        if ($still) {
+            Write-Host "  -> WARNING: MRVPN-service still running. Run this script as Admin." -ForegroundColor Red
+            throw "Cannot stop elevated MRVPN-service.exe. Please run PowerShell as Administrator."
+        }
     }
+
     Write-Host "  -> Stopped" -ForegroundColor Green
 }
 

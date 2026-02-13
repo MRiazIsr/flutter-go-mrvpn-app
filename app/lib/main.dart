@@ -7,11 +7,10 @@ import 'package:window_manager/window_manager.dart';
 
 import 'app.dart';
 import 'services/backend_launcher.dart';
+import 'services/ipc_service.dart';
 import 'services/logger.dart';
-import 'services/vpn_service.dart';
 
 final _backendLauncher = BackendLauncher();
-final _vpnService = VpnService();
 final _systemTray = SystemTray();
 
 void main() async {
@@ -107,21 +106,12 @@ Future<void> _showWindow() async {
 Future<void> _exitApp() async {
   AppLogger.log('MAIN', 'Exit requested — shutting down');
 
-  // Tell Go backend to exit via IPC. Must await so the pipe write
-  // actually happens before exit(0) kills the Dart process.
-  // The Go backend calls os.Exit(0) after 500ms.
+  // Send shutdown command directly to the backend via a fresh pipe connection.
+  // This works regardless of the Riverpod-managed IpcService connection state.
+  // The Go backend receives it, disconnects VPN, and exits gracefully.
   try {
-    if (_vpnService.isBackendConnected) {
-      await _vpnService.shutdownBackend().timeout(
-        const Duration(milliseconds: 500),
-        onTimeout: () {},
-      );
-    }
-  } catch (_) {}
-
-  // Fallback: taskkill (won't work for elevated, but try anyway).
-  try {
-    Process.runSync('taskkill', ['/F', '/IM', 'MRVPN-service.exe']);
+    IpcService.sendShutdownSync();
+    AppLogger.log('MAIN', 'Shutdown command sent via IPC');
   } catch (_) {}
 
   // Remove tray icon before exiting.

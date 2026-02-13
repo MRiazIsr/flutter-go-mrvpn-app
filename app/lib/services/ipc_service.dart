@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
+import 'dart:io' show sleep;
 import 'dart:math';
 
 import 'package:ffi/ffi.dart';
@@ -125,6 +126,51 @@ class IpcService {
 
   IpcService() {
     _loadKernel32();
+  }
+
+  /// Send a one-shot shutdown command to the backend via a fresh pipe connection.
+  /// This is independent of the main IPC connection state — useful during app
+  /// exit when the Riverpod-managed IpcService may already be disposed.
+  static void sendShutdownSync() {
+    try {
+      final kernel32 = DynamicLibrary.open('kernel32.dll');
+      final createFile = kernel32
+          .lookupFunction<_CreateFileNative, _CreateFileDart>('CreateFileW');
+      final writeFile = kernel32
+          .lookupFunction<_WriteFileNative, _WriteFileDart>('WriteFile');
+      final closeHandle = kernel32
+          .lookupFunction<_CloseHandleNative, _CloseHandleDart>('CloseHandle');
+
+      final pipeNamePtr = _pipePath.toNativeUtf16();
+      final handle = createFile(
+        pipeNamePtr,
+        _genericRead | _genericWrite,
+        0,
+        nullptr,
+        _openExisting,
+        _fileAttributeNormal,
+        0,
+      );
+      calloc.free(pipeNamePtr);
+
+      if (handle == _invalidHandleValue || handle == 0) return;
+
+      final msg = utf8.encode('{"id":"0","method":"service.shutdown"}\n');
+      final buffer = calloc<Uint8>(msg.length);
+      final bytesWritten = calloc<Uint32>();
+      for (int i = 0; i < msg.length; i++) {
+        buffer[i] = msg[i];
+      }
+      writeFile(handle, buffer, msg.length, bytesWritten, nullptr);
+      calloc.free(buffer);
+      calloc.free(bytesWritten);
+
+      // Give the backend a moment to process before closing
+      sleep(const Duration(milliseconds: 200));
+      closeHandle(handle);
+    } catch (_) {
+      // Best-effort — if pipe is not available, backend is already gone.
+    }
   }
 
   void _loadKernel32() {
