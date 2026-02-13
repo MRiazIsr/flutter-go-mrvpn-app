@@ -1,0 +1,142 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ---- Go Backend ----
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: core/go.sum
+
+      - name: Build Go backend
+        shell: pwsh
+        run: |
+          $tags = "with_quic,with_grpc,with_utls,with_gvisor,with_clash_api"
+          Push-Location core
+          go build -tags $tags -ldflags "-s -w" -o "${{ github.workspace }}\dist\MRVPN-service.exe" ./cmd/mriaz-service/
+          Pop-Location
+          Write-Host "Go backend built"
+
+      # ---- Flutter App ----
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Build Flutter app
+        shell: pwsh
+        run: |
+          Push-Location app
+          flutter pub get
+          flutter build windows --release
+          Pop-Location
+
+          # Copy Flutter build output to dist
+          $flutterBuild = "app\build\windows\x64\runner\Release"
+          if (-not (Test-Path $flutterBuild)) {
+            $flutterBuild = "app\build\windows\runner\Release"
+          }
+          Copy-Item -Path "$flutterBuild\*" -Destination dist -Recurse -Force
+          Write-Host "Flutter app built and copied to dist/"
+
+      # ---- Additional assets ----
+      - name: Copy assets
+        shell: pwsh
+        run: |
+          # Tray icon
+          Copy-Item "app\windows\runner\resources\app_icon.ico" -Destination dist -Force
+
+          # Wintun DLL
+          if (Test-Path "installer\assets\wintun.dll") {
+            Copy-Item "installer\assets\wintun.dll" -Destination dist -Force
+          }
+          Write-Host "Assets copied"
+
+      # ---- Installer ----
+      - name: Build installer
+        shell: pwsh
+        run: |
+          # Inno Setup is pre-installed on windows-latest runners
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            Write-Host "Inno Setup not found, skipping installer"
+            exit 0
+          }
+          & $iscc installer\inno_setup.iss
+          Write-Host "Installer built"
+
+      # ---- Package ----
+      - name: Create ZIP archive
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          $zipName = "MRVPN-$version-windows-x64.zip"
+          Compress-Archive -Path "dist\*" -DestinationPath $zipName -CompressionLevel Optimal
+          Write-Host "Created $zipName"
+
+      # ---- List artifacts ----
+      - name: List release files
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          Write-Host "=== Release artifacts ==="
+          Get-ChildItem "MRVPN-*-windows-x64.zip" | ForEach-Object { Write-Host "  $($_.Name) ($([math]::Round($_.Length/1MB, 1)) MB)" }
+          $installer = "build\MRVPN-Setup-$version.exe"
+          if (Test-Path $installer) {
+            Write-Host "  $(Split-Path $installer -Leaf) ($([math]::Round((Get-Item $installer).Length/1MB, 1)) MB)"
+          }
+
+      # ---- GitHub Release ----
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          $tag = "${{ github.ref_name }}"
+          $zipFile = "MRVPN-$version-windows-x64.zip"
+          $installer = "build\MRVPN-Setup-$version.exe"
+
+          $assets = @($zipFile)
+          if (Test-Path $installer) {
+            $assets += $installer
+          }
+
+          $notes = @"
+          ## MRVPN v$version
+
+          ### Downloads
+          - **MRVPN-Setup-$version.exe** — Windows installer (recommended)
+          - **MRVPN-$version-windows-x64.zip** — Portable version (extract and run)
+
+          ### Installation (installer)
+          1. Download and run ``MRVPN-Setup-$version.exe``
+          2. Follow the setup wizard
+          3. Accept the UAC prompt
+
+          ### Installation (portable)
+          1. Download and extract the ZIP
+          2. Run ``MRVPN.exe``
+          3. Accept the UAC prompt (required for VPN tunnel)
+
+          ### Requirements
+          - Windows 10/11 (x64)
+          - Administrator privileges (for TUN interface)
+          "@
+
+          gh release create $tag @assets --title "MRVPN v$version" --notes $notes
