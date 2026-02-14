@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/translations.dart';
 import '../providers/locale_provider.dart';
 import '../providers/update_provider.dart';
-import '../services/update_service.dart';
 import '../theme/colors.dart';
 import '../widgets/update_dialog.dart';
 
@@ -217,12 +216,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                            Text(
-                              'v$appVersion',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurface
-                                    .withValues(alpha: 0.5),
+                            ref.watch(appVersionProvider).when(
+                              data: (v) => Text(
+                                'v$v',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.5),
+                                ),
                               ),
+                              loading: () => const SizedBox.shrink(),
+                              error: (_, __) => const SizedBox.shrink(),
                             ),
                           ],
                         ),
@@ -277,9 +280,15 @@ class _UpdateCheckButtonState extends ConsumerState<_UpdateCheckButton> {
     final t = (String key) => S.of(widget.locale, key);
 
     if (info != null) {
+      final version =
+          ref.read(appVersionProvider).valueOrNull ?? '?';
       showDialog(
         context: context,
-        builder: (_) => UpdateDialog(info: info, locale: widget.locale),
+        builder: (_) => UpdateDialog(
+          info: info,
+          locale: widget.locale,
+          currentVersion: version,
+        ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -1,7 +1,7 @@
 name: mriaz_vpn
 description: "MRVPN - Windows VPN client powered by sing-box"
 publish_to: 'none'
-version: 1.0.2+3
+version: 0.0.0+0
 
 environment:
   sdk: ^3.8.1
@@ -36,6 +36,9 @@ dependencies:
 
   # HTTP client for subscriptions
   http: ^1.2.0
+
+  # App version info at runtime
+  package_info_plus: ^8.0.0
 
   # FFI for named pipe communication
   ffi: ^2.1.4

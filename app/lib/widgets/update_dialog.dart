@@ -11,11 +11,13 @@ import '../theme/colors.dart';
 class UpdateDialog extends StatelessWidget {
   final UpdateInfo info;
   final String locale;
+  final String currentVersion;
 
   const UpdateDialog({
     super.key,
     required this.info,
     required this.locale,
+    required this.currentVersion,
   });
 
   @override
@@ -62,7 +64,7 @@ class UpdateDialog extends StatelessWidget {
               children: [
                 _VersionChip(
                   label: t('currentVersion'),
-                  version: appVersion,
+                  version: currentVersion,
                   isPrimary: false,
                 ),
                 const Padding(
