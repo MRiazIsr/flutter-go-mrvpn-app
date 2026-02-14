@@ -104,6 +104,30 @@ class S {
     'upToDate': 'You\'re up to date!',
     'updateCheckFailed': 'Could not check for updates',
 
+    // Subscriptions
+    'subscriptions': 'Subscriptions',
+    'addSubscription': 'Add Subscription',
+    'subscriptionUrl': 'Subscription URL',
+    'subscriptionName': 'Name (optional)',
+    'lastUpdated': 'Updated',
+    'serversCount': 'servers',
+    'refresh': 'Refresh',
+    'refreshAll': 'Refresh all',
+    'confirmDeleteSubscription': 'Delete subscription and all its servers?',
+    'subscriptionAdded': 'Subscription added',
+    'subscriptionError': 'Subscription error',
+    'noSubscriptions': 'No subscriptions',
+    'trafficUsed': 'Used',
+    'never': 'Never',
+    'justNow': 'Just now',
+    'subscriptionDetected': 'Subscription URL?',
+    'subscriptionDetectedDesc':
+        'This looks like a subscription URL. Add as subscription to auto-update servers.',
+    'asSubscription': 'As subscription',
+    'asServer': 'As server',
+    'addServerShort': 'Add Server',
+    'addSubscriptionShort': 'Add Subscription',
+
     // Sidebar
     'home': 'Home',
     'collapse': 'Collapse',
@@ -199,6 +223,30 @@ class S {
     'checking': 'Проверка...',
     'upToDate': 'У вас последняя версия!',
     'updateCheckFailed': 'Не удалось проверить обновления',
+
+    // Subscriptions
+    'subscriptions': 'Подписки',
+    'addSubscription': 'Добавить подписку',
+    'subscriptionUrl': 'URL подписки',
+    'subscriptionName': 'Имя (необязательно)',
+    'lastUpdated': 'Обновлено',
+    'serversCount': 'серверов',
+    'refresh': 'Обновить',
+    'refreshAll': 'Обновить все',
+    'confirmDeleteSubscription': 'Удалить подписку и все её серверы?',
+    'subscriptionAdded': 'Подписка добавлена',
+    'subscriptionError': 'Ошибка подписки',
+    'noSubscriptions': 'Нет подписок',
+    'trafficUsed': 'Использовано',
+    'never': 'Никогда',
+    'justNow': 'Только что',
+    'subscriptionDetected': 'URL подписки?',
+    'subscriptionDetectedDesc':
+        'Похоже на URL подписки. Добавить как подписку для автообновления серверов.',
+    'asSubscription': 'Как подписку',
+    'asServer': 'Как сервер',
+    'addServerShort': 'Добавить сервер',
+    'addSubscriptionShort': 'Добавить подписку',
 
     // Sidebar
     'home': 'Главная',

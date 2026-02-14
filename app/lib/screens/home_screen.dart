@@ -9,6 +9,7 @@ import '../models/vpn_state.dart';
 import '../providers/locale_provider.dart';
 import '../providers/server_provider.dart';
 import '../providers/split_tunnel_provider.dart';
+import '../providers/subscription_provider.dart';
 import '../providers/vpn_provider.dart';
 import '../theme/colors.dart';
 import '../widgets/connect_button.dart';
@@ -104,12 +105,55 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final vpnState = ref.watch(vpnProvider);
     final selectedServer = ref.watch(selectedServerConfigProvider);
     final servers = ref.watch(serverProvider);
+    final subscriptions = ref.watch(subscriptionProvider);
     final locale = ref.watch(localeProvider);
     final theme = Theme.of(context);
     final t = (String key) => S.of(locale, key);
 
     // Manage the duration timer based on current status.
     _manageDurationTimer(vpnState.status);
+
+    // Empty state when no servers and no subscriptions
+    if (servers.isEmpty && subscriptions.isEmpty) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.vpn_key_outlined,
+                size: 72,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.25),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                t('noServerSelected'),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => context.go('/servers'),
+                    icon: const Icon(Icons.dns_outlined),
+                    label: Text(t('addServerShort')),
+                  ),
+                  const SizedBox(width: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/subscriptions'),
+                    icon: const Icon(Icons.rss_feed),
+                    label: Text(t('addSubscriptionShort')),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       body: Center(

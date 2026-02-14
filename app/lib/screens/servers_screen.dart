@@ -6,6 +6,7 @@ import '../l10n/translations.dart';
 import '../models/server_config.dart';
 import '../providers/locale_provider.dart';
 import '../providers/server_provider.dart';
+import '../providers/subscription_provider.dart';
 import '../theme/colors.dart';
 import '../widgets/server_card.dart';
 
@@ -76,6 +77,13 @@ class _ServersScreenState extends ConsumerState<ServersScreen> {
                 final link = controller.text.trim();
                 if (link.isEmpty) return;
 
+                // If it looks like a subscription URL, offer to add as subscription
+                if (link.startsWith('https://') || link.startsWith('http://')) {
+                  Navigator.of(dialogContext).pop();
+                  _showSubscriptionPrompt(link);
+                  return;
+                }
+
                 try {
                   ref.read(serverProvider.notifier).addServer(link);
                   Navigator.of(dialogContext).pop();
@@ -94,6 +102,74 @@ class _ServersScreenState extends ConsumerState<ServersScreen> {
         );
       },
     );
+  }
+
+  /// Show a prompt when user pastes an https:// URL into the server dialog.
+  Future<void> _showSubscriptionPrompt(String url) async {
+    final locale = ref.read(localeProvider);
+    final t = (String key) => S.of(locale, key);
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(t('subscriptionDetected')),
+          content: Text(t('subscriptionDetectedDesc')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop('cancel'),
+              child: Text(t('cancel')),
+            ),
+            OutlinedButton(
+              onPressed: () => Navigator.of(dialogContext).pop('server'),
+              child: Text(t('asServer')),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop('subscription'),
+              child: Text(t('asSubscription')),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == 'subscription') {
+      try {
+        await ref
+            .read(subscriptionProvider.notifier)
+            .addSubscription(url);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(t('subscriptionAdded')),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${t('subscriptionError')}: $e'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } else if (result == 'server') {
+      try {
+        ref.read(serverProvider.notifier).addServer(url);
+      } on FormatException catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.message),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
   }
 
   /// Show a confirmation dialog before deleting a server.
@@ -175,9 +251,16 @@ class _ServersScreenState extends ConsumerState<ServersScreen> {
   Widget build(BuildContext context) {
     final servers = ref.watch(serverProvider);
     final selectedId = ref.watch(selectedServerProvider);
+    final subscriptions = ref.watch(subscriptionProvider);
     final locale = ref.watch(localeProvider);
     final theme = Theme.of(context);
     final t = (String key) => S.of(locale, key);
+
+    // Collect all server IDs that belong to subscriptions
+    final subscriptionServerIds = <String>{};
+    for (final sub in subscriptions) {
+      subscriptionServerIds.addAll(sub.serverIds);
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -223,16 +306,19 @@ class _ServersScreenState extends ConsumerState<ServersScreen> {
               itemCount: servers.length,
               itemBuilder: (context, index) {
                 final server = servers[index];
+                final isFromSub =
+                    subscriptionServerIds.contains(server.id);
                 return ServerCard(
                   server: server,
                   isSelected: server.id == selectedId,
+                  isFromSubscription: isFromSub,
                   onTap: () {
                     ref
                         .read(selectedServerProvider.notifier)
                         .select(server.id);
                   },
                   onEdit: () => _showEditDialog(server),
-                  onDelete: () => _confirmDelete(server),
+                  onDelete: isFromSub ? null : () => _confirmDelete(server),
                 );
               },
             ),

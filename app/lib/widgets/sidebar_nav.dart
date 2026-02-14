@@ -22,7 +22,7 @@ class SidebarNav extends ConsumerStatefulWidget {
 class _SidebarNavState extends ConsumerState<SidebarNav> {
   bool _extended = true;
 
-  static const _routes = ['/', '/servers', '/split-tunnel', '/settings'];
+  static const _routes = ['/', '/servers', '/subscriptions', '/split-tunnel', '/settings'];
 
   List<NavigationRailDestination> _destinations(String locale) {
     final t = (String key) => S.of(locale, key);
@@ -36,6 +36,11 @@ class _SidebarNavState extends ConsumerState<SidebarNav> {
         icon: const Icon(Icons.dns_outlined),
         selectedIcon: const Icon(Icons.dns),
         label: Text(t('servers')),
+      ),
+      NavigationRailDestination(
+        icon: const Icon(Icons.rss_feed_outlined),
+        selectedIcon: const Icon(Icons.rss_feed),
+        label: Text(t('subscriptions')),
       ),
       NavigationRailDestination(
         icon: const Icon(Icons.call_split_outlined),
