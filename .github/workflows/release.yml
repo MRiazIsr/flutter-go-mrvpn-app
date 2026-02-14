@@ -9,9 +9,67 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  # ---- Parallel build jobs ----
+  build-go:
     runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: core/go.sum
+
+      - name: Build Go backend
+        shell: pwsh
+        run: |
+          $tags = "with_quic,with_grpc,with_utls,with_gvisor,with_clash_api"
+          Push-Location core
+          go build -tags $tags -ldflags "-s -w" -o "${{ github.workspace }}\MRVPN-service.exe" ./cmd/mriaz-service/
+          Pop-Location
+
+      - name: Upload Go artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-backend
+          path: MRVPN-service.exe
+          retention-days: 1
+
+  build-flutter:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build Flutter app
+        shell: pwsh
+        run: |
+          Push-Location app
+          flutter pub get
+          flutter build windows --release
+          Pop-Location
+
+      - name: Upload Flutter artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-app
+          path: |
+            app/build/windows/x64/runner/Release/
+            app/build/windows/runner/Release/
+          retention-days: 1
+
+  # ---- Package & release (waits for both builds) ----
+  release:
+    needs: [build-go, build-flutter]
+    runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,48 +86,28 @@ jobs:
           }
           Write-Host "Confirmed: tag is on main branch"
 
-      # ---- Go Backend ----
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - name: Download Go artifact
+        uses: actions/download-artifact@v4
         with:
-          go-version: '1.25'
-          cache-dependency-path: core/go.sum
+          name: go-backend
+          path: dist
 
-      - name: Build Go backend
+      - name: Download Flutter artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: flutter-app
+          path: flutter-out
+
+      - name: Assemble dist
         shell: pwsh
         run: |
-          $tags = "with_quic,with_grpc,with_utls,with_gvisor,with_clash_api"
-          Push-Location core
-          go build -tags $tags -ldflags "-s -w" -o "${{ github.workspace }}\dist\MRVPN-service.exe" ./cmd/mriaz-service/
-          Pop-Location
-          Write-Host "Go backend built"
-
-      # ---- Flutter App ----
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-
-      - name: Build Flutter app
-        shell: pwsh
-        run: |
-          Push-Location app
-          flutter pub get
-          flutter build windows --release
-          Pop-Location
-
-          # Copy Flutter build output to dist
-          $flutterBuild = "app\build\windows\x64\runner\Release"
+          # Find the Flutter release folder (x64 or non-x64)
+          $flutterBuild = "flutter-out\app\build\windows\x64\runner\Release"
           if (-not (Test-Path $flutterBuild)) {
-            $flutterBuild = "app\build\windows\runner\Release"
+            $flutterBuild = "flutter-out\app\build\windows\runner\Release"
           }
           Copy-Item -Path "$flutterBuild\*" -Destination dist -Recurse -Force
-          Write-Host "Flutter app built and copied to dist/"
 
-      # ---- Additional assets ----
-      - name: Copy assets
-        shell: pwsh
-        run: |
           # Tray icon
           Copy-Item "app\windows\runner\resources\app_icon.ico" -Destination dist -Force
 
@@ -77,13 +115,12 @@ jobs:
           if (Test-Path "installer\assets\wintun.dll") {
             Copy-Item "installer\assets\wintun.dll" -Destination dist -Force
           }
-          Write-Host "Assets copied"
+          Write-Host "dist/ assembled"
+          Get-ChildItem dist | ForEach-Object { Write-Host "  $($_.Name)" }
 
-      # ---- Installer ----
       - name: Build installer
         shell: pwsh
         run: |
-          # Inno Setup is pre-installed on windows-latest runners
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) {
             Write-Host "Inno Setup not found, skipping installer"
@@ -93,7 +130,6 @@ jobs:
           & $iscc "/DMyAppVersion=$version" installer\inno_setup.iss
           Write-Host "Installer built"
 
-      # ---- Package ----
       - name: Create ZIP archive
         shell: pwsh
         run: |
@@ -102,19 +138,6 @@ jobs:
           Compress-Archive -Path "dist\*" -DestinationPath $zipName -CompressionLevel Optimal
           Write-Host "Created $zipName"
 
-      # ---- List artifacts ----
-      - name: List release files
-        shell: pwsh
-        run: |
-          $version = "${{ github.ref_name }}".TrimStart("v")
-          Write-Host "=== Release artifacts ==="
-          Get-ChildItem "MRVPN-*-windows-x64.zip" | ForEach-Object { Write-Host "  $($_.Name) ($([math]::Round($_.Length/1MB, 1)) MB)" }
-          $installer = "build\MRVPN-Setup-$version.exe"
-          if (Test-Path $installer) {
-            Write-Host "  $(Split-Path $installer -Leaf) ($([math]::Round((Get-Item $installer).Length/1MB, 1)) MB)"
-          }
-
-      # ---- GitHub Release ----
       - name: Create GitHub Release
         shell: pwsh
         env:
@@ -123,13 +146,11 @@ jobs:
           $version = "${{ github.ref_name }}".TrimStart("v")
           $tag = "${{ github.ref_name }}"
           $zipFile = "MRVPN-$version-windows-x64.zip"
-          $installer = "build\MRVPN-Setup-$version.exe"
 
           $assets = @($zipFile)
           # Find installer by pattern (robust against version mismatches)
           $found = Get-ChildItem "build\MRVPN-Setup-*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($found) {
-            # Rename to match tag version
             $installer = "MRVPN-Setup-$version.exe"
             Copy-Item $found.FullName $installer
             $assets += $installer
