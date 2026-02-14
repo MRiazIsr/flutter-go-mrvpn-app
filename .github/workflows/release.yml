@@ -126,12 +126,18 @@ jobs:
           $installer = "build\MRVPN-Setup-$version.exe"
 
           $assets = @($zipFile)
-          if (Test-Path $installer) {
+          # Find installer by pattern (robust against version mismatches)
+          $found = Get-ChildItem "build\MRVPN-Setup-*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($found) {
+            # Rename to match tag version
+            $installer = "MRVPN-Setup-$version.exe"
+            Copy-Item $found.FullName $installer
             $assets += $installer
             # Fixed-name copy so the landing page can use a stable download URL
-            $stableInstaller = "MRVPN-Setup.exe"
-            Copy-Item $installer $stableInstaller
-            $assets += $stableInstaller
+            Copy-Item $found.FullName "MRVPN-Setup.exe"
+            $assets += "MRVPN-Setup.exe"
+          } else {
+            Write-Warning "Installer not found in build/, skipping"
           }
 
           $notes = @"

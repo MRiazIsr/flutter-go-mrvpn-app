@@ -2,7 +2,9 @@
 ; Build with: "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" inno_setup.iss
 
 #define MyAppName "MRVPN"
-#define MyAppVersion "1.0.3"
+#ifndef MyAppVersion
+  #define MyAppVersion "0.0.0"
+#endif
 #define MyAppPublisher "MRVPN"
 #define MyAppExeName "MRVPN.exe"
 #define MyServiceExeName "MRVPN-service.exe"
