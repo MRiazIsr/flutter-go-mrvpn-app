@@ -49,6 +49,17 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Set version from tag
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          $parts = $version.Split(".")
+          $build = ([int]$parts[0]) * 10000 + ([int]$parts[1]) * 100 + ([int]$parts[2])
+          $pubspec = Get-Content app/pubspec.yaml -Raw
+          $pubspec = $pubspec -replace 'version:\s*\S+', "version: $version+$build"
+          Set-Content app/pubspec.yaml $pubspec -NoNewline
+          Write-Host "Set pubspec version to $version+$build"
+
       - name: Build Flutter app
         shell: pwsh
         run: |
