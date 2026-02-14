@@ -127,6 +127,10 @@ jobs:
           $assets = @($zipFile)
           if (Test-Path $installer) {
             $assets += $installer
+            # Fixed-name copy so the landing page can use a stable download URL
+            $stableInstaller = "MRVPN-Setup.exe"
+            Copy-Item $installer $stableInstaller
+            $assets += $stableInstaller
           }
 
           $notes = @"
