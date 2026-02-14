@@ -4,7 +4,7 @@ import 'dart:io';
 import 'logger.dart';
 
 /// Current app version — must match pubspec.yaml version.
-const String appVersion = '1.0.2';
+const String appVersion = '1.0.4';
 
 /// Information about an available update.
 class UpdateInfo {

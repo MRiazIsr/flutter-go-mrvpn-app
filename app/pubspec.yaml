@@ -1,7 +1,7 @@
 name: mriaz_vpn
 description: "MRVPN - Windows VPN client powered by sing-box"
 publish_to: 'none'
-version: 1.0.2+3
+version: 1.0.4+5
 
 environment:
   sdk: ^3.8.1
