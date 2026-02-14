@@ -14,6 +14,9 @@ class ServerCard extends StatelessWidget {
   /// Whether this server is currently selected.
   final bool isSelected;
 
+  /// Whether this server belongs to a subscription.
+  final bool isFromSubscription;
+
   /// Called when the card is tapped (to select this server).
   final VoidCallback? onTap;
 
@@ -27,6 +30,7 @@ class ServerCard extends StatelessWidget {
     super.key,
     required this.server,
     this.isSelected = false,
+    this.isFromSubscription = false,
     this.onTap,
     this.onEdit,
     this.onDelete,
@@ -100,6 +104,15 @@ class ServerCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                        if (isFromSubscription) ...[
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.cloud_outlined,
+                            size: 16,
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.4),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -156,16 +169,17 @@ class ServerCard extends StatelessWidget {
                 tooltip: 'Edit',
                 visualDensity: VisualDensity.compact,
               ),
-              IconButton(
-                icon: Icon(
-                  Icons.delete_outline,
-                  size: 20,
-                  color: theme.colorScheme.error,
+              if (!isFromSubscription)
+                IconButton(
+                  icon: Icon(
+                    Icons.delete_outline,
+                    size: 20,
+                    color: theme.colorScheme.error,
+                  ),
+                  onPressed: onDelete,
+                  tooltip: 'Delete',
+                  visualDensity: VisualDensity.compact,
                 ),
-                onPressed: onDelete,
-                tooltip: 'Delete',
-                visualDensity: VisualDensity.compact,
-              ),
             ],
           ),
         ),

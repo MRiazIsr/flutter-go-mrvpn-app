@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/server_config.dart';
 import '../models/split_tunnel_config.dart';
+import '../models/subscription_config.dart';
 
 /// Local persistence service using shared_preferences.
 ///
@@ -20,6 +21,7 @@ class StorageService {
   static const String _keyMtu = 'mtu';
   static const String _keyLastServerId = 'last_server_id';
   static const String _keyLocale = 'locale';
+  static const String _keySubscriptions = 'subscriptions';
 
   SharedPreferences? _prefs;
 
@@ -194,6 +196,29 @@ class StorageService {
   Future<String> loadLocale() async {
     final prefs = await _preferences;
     return prefs.getString(_keyLocale) ?? 'en';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Subscriptions
+  // ---------------------------------------------------------------------------
+
+  /// Save the list of subscription configurations.
+  Future<bool> saveSubscriptions(List<SubscriptionConfig> subs) async {
+    final prefs = await _preferences;
+    final jsonList = subs.map((s) => jsonEncode(s.toJson())).toList();
+    return prefs.setStringList(_keySubscriptions, jsonList);
+  }
+
+  /// Load the list of saved subscription configurations.
+  Future<List<SubscriptionConfig>> loadSubscriptions() async {
+    final prefs = await _preferences;
+    final jsonList = prefs.getStringList(_keySubscriptions);
+    if (jsonList == null || jsonList.isEmpty) return [];
+
+    return jsonList.map((jsonStr) {
+      final map = jsonDecode(jsonStr) as Map<String, dynamic>;
+      return SubscriptionConfig.fromJson(map);
+    }).toList();
   }
 
   // ---------------------------------------------------------------------------

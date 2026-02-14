@@ -34,6 +34,9 @@ dependencies:
   # Google Fonts
   google_fonts: ^6.2.1
 
+  # HTTP client for subscriptions
+  http: ^1.2.0
+
   # App version info at runtime
   package_info_plus: ^8.0.0
 

@@ -9,6 +9,7 @@ import 'services/update_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/servers_screen.dart';
 import 'screens/split_tunnel_screen.dart';
+import 'screens/subscriptions_screen.dart';
 import 'screens/settings_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/app_header.dart';
@@ -37,6 +38,12 @@ final _router = GoRouter(
           path: '/servers',
           pageBuilder: (context, state) => const NoTransitionPage(
             child: ServersScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/subscriptions',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: SubscriptionsScreen(),
           ),
         ),
         GoRoute(
