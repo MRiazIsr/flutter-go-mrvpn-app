@@ -384,7 +384,7 @@
       </p>
 
       <div class="hero-buttons">
-        <a id="hero-download-btn" href="https://github.com/MRiazIsr/flutter-go-mrvpn-app/releases/latest" class="btn btn-primary" target="_blank" rel="noopener">
+        <a id="hero-download-btn" href="https://github.com/MRiazIsr/flutter-go-mrvpn-app/releases/latest" class="btn btn-primary">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Download
         </a>
@@ -466,6 +466,18 @@
         });
       }, { threshold: 0.1 });
       document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+      // Resolve direct download URL for the latest installer
+      fetch('https://api.github.com/repos/MRiazIsr/flutter-go-mrvpn-app/releases/latest')
+        .then(r => r.json())
+        .then(release => {
+          const exe = release.assets && release.assets.find(a => a.name.endsWith('.exe'));
+          if (exe) {
+            const btn = document.getElementById('hero-download-btn');
+            btn.href = exe.browser_download_url;
+          }
+        })
+        .catch(() => {});
     });
   </script>
 </body>

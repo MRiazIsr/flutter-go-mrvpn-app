@@ -73,6 +73,12 @@ JSON-RPC over newline-delimited JSON on `\\.\pipe\MRVPN`:
 
 Methods: `vpn.connect`, `vpn.disconnect`, `vpn.status`, `servers.ping`, `apps.list`, `split.setConfig`, `split.getConfig`, `service.shutdown`
 
+## Git Workflow
+
+- **Never commit directly to `main`**. Always create a feature branch and open a PR via `gh pr create`.
+- Branch naming: `fix/short-description`, `feature/short-description`, `chore/short-description`.
+- After PR is merged, the `v*` tag triggers the release workflow.
+
 ## Important Notes
 
 - **Elevated process**: Go backend runs as admin. Cannot be killed via `taskkill` from non-elevated Flutter app. Only `service.shutdown` IPC command works.
