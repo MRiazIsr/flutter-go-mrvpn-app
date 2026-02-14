@@ -97,9 +97,15 @@ class _AppShellState extends ConsumerState<_AppShell> {
         if (info != null && mounted) {
           _updateChecked = true;
           final locale = ref.read(localeProvider);
+          final version =
+              ref.read(appVersionProvider).valueOrNull ?? '?';
           showDialog(
             context: context,
-            builder: (_) => UpdateDialog(info: info, locale: locale),
+            builder: (_) => UpdateDialog(
+              info: info,
+              locale: locale,
+              currentVersion: version,
+            ),
           ).then((result) {
             if (result == 'skip') {
               skipVersion(info.version);

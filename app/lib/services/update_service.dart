@@ -1,10 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:package_info_plus/package_info_plus.dart';
+
 import 'logger.dart';
 
-/// Current app version — must match pubspec.yaml version.
-const String appVersion = '1.0.2';
+/// Returns the current app version from pubspec.yaml at runtime.
+Future<String> getAppVersion() async {
+  final info = await PackageInfo.fromPlatform();
+  return info.version;
+}
 
 /// Information about an available update.
 class UpdateInfo {
@@ -34,6 +39,8 @@ class UpdateService {
   /// Silently returns `null` on any error (no internet, private repo, etc.).
   Future<UpdateInfo?> checkForUpdate() async {
     try {
+      final currentVersion = await getAppVersion();
+
       final client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 10);
 
@@ -44,7 +51,7 @@ class UpdateService {
 
       final request = await client.getUrl(uri);
       request.headers.set('Accept', 'application/vnd.github.v3+json');
-      request.headers.set('User-Agent', 'MRVPN/$appVersion');
+      request.headers.set('User-Agent', 'MRVPN/$currentVersion');
 
       final response = await request.close().timeout(
             const Duration(seconds: 15),
@@ -64,10 +71,10 @@ class UpdateService {
       final tagName = json['tag_name'] as String? ?? '';
       final remoteVersion = tagName.replaceFirst(RegExp(r'^v'), '');
 
-      if (!isNewer(remoteVersion, appVersion)) {
+      if (!isNewer(remoteVersion, currentVersion)) {
         AppLogger.log(
           'UPDATE',
-          'Up to date (current=$appVersion, latest=$remoteVersion)',
+          'Up to date (current=$currentVersion, latest=$remoteVersion)',
         );
         return null;
       }
