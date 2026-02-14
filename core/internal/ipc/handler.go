@@ -253,7 +253,7 @@ func (h *Handler) handleShutdown(req *Request) *Response {
 	log.Printf("Shutdown requested via IPC")
 	// Signal main goroutine for graceful shutdown (runs deferred cleanup)
 	go func() {
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		close(h.ShutdownCh)
 	}()
 	return &Response{

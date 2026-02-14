@@ -15,6 +15,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag is on main branch
+        shell: pwsh
+        run: |
+          $branches = git branch -r --contains ${{ github.sha }}
+          if ($branches -notmatch 'origin/main') {
+            Write-Error "Release tags must be on the main branch. Aborting."
+            exit 1
+          }
+          Write-Host "Confirmed: tag is on main branch"
 
       # ---- Go Backend ----
       - name: Setup Go

@@ -107,16 +107,20 @@ func runCore(stop <-chan struct{}) {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	if stop != nil {
-		// Service mode: wait for SCM stop, IPC shutdown, or OS signal
+		// Service mode: wait for SCM stop, IPC shutdown, client drain, or OS signal
 		select {
 		case <-stop:
 		case <-handler.ShutdownCh:
+		case <-server.ClientsDrained():
+			log.Println("All clients disconnected, shutting down...")
 		case <-sigChan:
 		}
 	} else {
-		// Interactive mode: wait for IPC shutdown or OS signal
+		// Interactive mode: wait for IPC shutdown, client drain, or OS signal
 		select {
 		case <-handler.ShutdownCh:
+		case <-server.ClientsDrained():
+			log.Println("All clients disconnected, shutting down...")
 		case <-sigChan:
 		}
 	}

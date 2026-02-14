@@ -19,19 +19,22 @@ const pipeName = `\\.\pipe\MRVPN`
 
 // Server is the named pipe IPC server.
 type Server struct {
-	handler  *Handler
-	listener net.Listener
-	clients  map[net.Conn]bool
-	mu       sync.Mutex
-	done     chan struct{}
+	handler        *Handler
+	listener       net.Listener
+	clients        map[net.Conn]bool
+	mu             sync.Mutex
+	done           chan struct{}
+	hadClient      bool
+	clientsDrained chan struct{}
 }
 
 // NewServer creates a new IPC server with the given handler.
 func NewServer(handler *Handler) *Server {
 	return &Server{
-		handler: handler,
-		clients: make(map[net.Conn]bool),
-		done:    make(chan struct{}),
+		handler:        handler,
+		clients:        make(map[net.Conn]bool),
+		done:           make(chan struct{}),
+		clientsDrained: make(chan struct{}),
 	}
 }
 
@@ -112,6 +115,7 @@ func (s *Server) acceptLoop() {
 			continue
 		}
 		s.clients[conn] = true
+		s.hadClient = true
 		s.mu.Unlock()
 
 		go s.handleClient(conn)
@@ -122,8 +126,16 @@ func (s *Server) handleClient(conn net.Conn) {
 	defer func() {
 		s.mu.Lock()
 		delete(s.clients, conn)
+		drained := len(s.clients) == 0 && s.hadClient
 		s.mu.Unlock()
 		conn.Close()
+		if drained {
+			log.Println("All IPC clients disconnected, signaling drain")
+			select {
+			case s.clientsDrained <- struct{}{}:
+			default:
+			}
+		}
 	}()
 
 	scanner := bufio.NewScanner(conn)
@@ -156,6 +168,12 @@ func (s *Server) handleClient(conn net.Conn) {
 			log.Printf("client read error: %v", err)
 		}
 	}
+}
+
+// ClientsDrained returns a channel that receives a signal when all clients
+// have disconnected after at least one client was connected.
+func (s *Server) ClientsDrained() <-chan struct{} {
+	return s.clientsDrained
 }
 
 func (s *Server) sendResponse(conn net.Conn, resp *Response) {
