@@ -89,7 +89,8 @@ jobs:
             Write-Host "Inno Setup not found, skipping installer"
             exit 0
           }
-          & $iscc installer\inno_setup.iss
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          & $iscc "/DMyAppVersion=$version" installer\inno_setup.iss
           Write-Host "Installer built"
 
       # ---- Package ----
